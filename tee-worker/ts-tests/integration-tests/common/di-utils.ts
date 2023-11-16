@@ -4,18 +4,19 @@ import { Codec } from '@polkadot/types/types';
 import { TypeRegistry } from '@polkadot/types';
 import { HexString } from '@polkadot/util/types';
 import { Bytes } from '@polkadot/types-codec';
-import { IntegrationTestContext, JsonRpcRequest, PublicKeyJson } from '../../common/type-definitions';
-import { WorkerRpcReturnValue, TrustedCallSigned, Getter, AesOutput } from '@litentry/parachain-api';
-import { encryptWithTeeShieldingKey, Signer, encryptWithAes } from '../../common/utils';
-import { aesKey, decodeRpcBytesAsString, keyNonce } from '../../common/call';
+import { IntegrationTestContext, JsonRpcRequest, PublicKeyJson } from './type-definitions';
+import { WorkerRpcReturnValue, TrustedCallSigned, Getter } from '@litentry/parachain-api';
+import { encryptWithTeeShieldingKey, Signer, encryptWithAes } from './utils';
+import { aesKey, decodeRpcBytesAsString, keyNonce } from './call';
 import { createPublicKey, KeyObject } from 'crypto';
 import WebSocketAsPromised from 'websocket-as-promised';
 import { u32, Option, u8, Vector } from 'scale-ts';
 import { Index } from '@polkadot/types/interfaces';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import type { LitentryPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext } from '@litentry/sidechain-api';
-import { AesOutput as CustomAesOutput } from '../../common/type-definitions';
-import { createJsonRpcRequest, nextRequestId } from '../../common/helpers';
+import { AesOutput as CustomAesOutput } from './type-definitions';
+import { AesOutput } from '@litentry/parachain-api';
+import { createJsonRpcRequest, nextRequestId } from './helpers';
 
 // Send the request to worker ws
 // we should perform different actions based on the returned status:
@@ -301,7 +302,6 @@ export const sendRequestFromGetter = async (
 export const getTeeShieldingKey = async (context: IntegrationTestContext) => {
     const request = createJsonRpcRequest('author_getShieldingKey', Uint8Array.from([]), nextRequestId(context));
     const res = await sendRequest(context.tee, request, context.api);
-    
     const k = JSON.parse(decodeRpcBytesAsString(res.value)) as PublicKeyJson;
 
     return createPublicKey({

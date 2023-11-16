@@ -1,4 +1,4 @@
-import { WsProvider, ApiPromise } from 'parachain-api';
+import { WsProvider, ApiPromise } from '@litentry/parachain-api';
 import { Keyring } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { ethers } from 'ethers';
@@ -62,6 +62,7 @@ export async function initIntegrationTestContext(
     const { sidechainMetaData, sidechainRegistry } = await getSidechainMetadata(wsp, api, requestId);
     const web3Signers = await generateWeb3Wallets(walletsNumber);
     const { mrEnclave, teeShieldingKey } = await getEnclave(api);
+    
     return {
         tee: wsp,
         api,

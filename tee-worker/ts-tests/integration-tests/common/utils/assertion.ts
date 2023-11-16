@@ -20,7 +20,7 @@ import {
     PalletVcManagementVcContext,
     StfError,
     LinkIdentityResult,
-} from 'parachain-api';
+} from '@litentry/parachain-api';
 import { Bytes } from '@polkadot/types-codec';
 import { Signer, decryptWithAes } from './crypto';
 import { blake2AsHex } from '@polkadot/util-crypto';
