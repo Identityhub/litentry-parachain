@@ -62,7 +62,7 @@ export async function initIntegrationTestContext(
     const { sidechainMetaData, sidechainRegistry } = await getSidechainMetadata(wsp, api, requestId);
     const web3Signers = await generateWeb3Wallets(walletsNumber);
     const { mrEnclave, teeShieldingKey } = await getEnclave(api);
-    
+
     return {
         tee: wsp,
         api,

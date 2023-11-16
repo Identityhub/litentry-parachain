@@ -301,7 +301,7 @@ export const sendRequestFromGetter = async (
 export const getTeeShieldingKey = async (context: IntegrationTestContext) => {
     const request = createJsonRpcRequest('author_getShieldingKey', Uint8Array.from([]), nextRequestId(context));
     const res = await sendRequest(context.tee, request, context.api);
-    
+
     const k = JSON.parse(decodeRpcBytesAsString(res.value)) as PublicKeyJson;
 
     return createPublicKey({
