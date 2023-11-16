@@ -185,7 +185,7 @@ jobs:
         working-directory: ./tee-worker/ts-tests
         # We can't update the lockfile here because the client-api hasn't been generated yet.
         run: |
-          cat ~/.npmrc
+          cat .npmrc
           pnpm install --frozen-lockfile
 
       - name: Tee-worker check ts code format
