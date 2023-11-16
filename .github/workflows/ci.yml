@@ -170,18 +170,12 @@ jobs:
       - name: Enable corepack and pnpm
         run: corepack enable && corepack enable pnpm
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          registry-url: https://npm.pkg.github.com/
-
       - name: Tee-worker ts-tests install npm deps
         working-directory: ./tee-worker/ts-tests
         # We can't update the lockfile here because the client-api hasn't been generated yet.
         run: |
-          echo "//npm.pkg.github.com/:_authToken=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" > .npmrc
-          npm config set @litentry:registry https://npm.pkg.github.com
+          # echo "//npm.pkg.github.com/:_authToken=${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
+          # npm config set @litentry:registry https://npm.pkg.github.com
           npm config list
           pnpm install --frozen-lockfile
 
