@@ -14,9 +14,7 @@ function usage() {
 [ $# -ne 1 ] && (usage; exit 1)
 TEST=$1
 
-echo "//npm.pkg.github.com/:_authToken=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" > /root/.npmrc
-npm config set @litentry:registry https://npm.pkg.github.com
+
 cd /ts-tests
-npm config list
 pnpm install
 pnpm --filter integration-tests run $TEST:staging
