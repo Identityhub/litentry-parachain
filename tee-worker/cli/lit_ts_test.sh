@@ -14,7 +14,7 @@ function usage() {
 [ $# -ne 1 ] && (usage; exit 1)
 TEST=$1
 
-echo "//npm.pkg.github.com/:_authToken=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" > .npmrc
+echo "//npm.pkg.github.com/:_authToken=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" > /root/.npmrc
 npm config set @litentry:registry https://npm.pkg.github.com
 cd /ts-tests
 npm config list
