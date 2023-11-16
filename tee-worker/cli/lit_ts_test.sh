@@ -14,8 +14,7 @@ function usage() {
 [ $# -ne 1 ] && (usage; exit 1)
 TEST=$1
 
-echo "//npm.pkg.github.com/:_authToken=\${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
-npm config set @litentry:registry https://npm.pkg.github.com
 cd /ts-tests
+npm config list
 pnpm install
 pnpm --filter integration-tests run $TEST:staging
