@@ -170,6 +170,11 @@ jobs:
       - name: Enable corepack and pnpm
         run: corepack enable && corepack enable pnpm
 
+      - name: Setup npm config
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=\${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
+          npm config set @litentry:registry https://npm.pkg.github.com
+          
       - name: Tee-worker ts-tests install npm deps
         working-directory: ./tee-worker/ts-tests
         # We can't update the lockfile here because the client-api hasn't been generated yet.
