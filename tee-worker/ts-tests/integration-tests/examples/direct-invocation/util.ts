@@ -13,7 +13,7 @@ import WebSocketAsPromised from 'websocket-as-promised';
 import { u32, Option, u8, Vector } from 'scale-ts';
 import { Index } from '@polkadot/types/interfaces';
 import { blake2AsHex } from '@polkadot/util-crypto';
-import type { LitentryPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext } from 'sidechain-api';
+import type { LitentryPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext } from '@litentry/sidechain-api';
 import { AesOutput as CustomAesOutput } from '../../common/type-definitions';
 import { AesOutput } from 'parachain-api/build/interfaces';
 import { createJsonRpcRequest, nextRequestId } from '../../common/helpers';

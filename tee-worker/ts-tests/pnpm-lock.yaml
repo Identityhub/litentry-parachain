@@ -10,6 +10,12 @@ importers:
 
   integration-tests:
     dependencies:
+      '@litentry/parachain-api':
+        specifier: 0.0.1
+        version: 0.0.1
+      '@litentry/sidechain-api':
+        specifier: 0.0.1
+        version: 0.0.1
       '@noble/ed25519':
         specifier: ^1.7.3
         version: 1.7.3
@@ -639,6 +645,52 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
     dev: true
+
+  /@litentry/parachain-api@0.0.1:
+    resolution: {integrity: sha512-qr/RjEHwjJDlRghPyiXyHWinmL9BcBNFldLe9HpTJlS5HJnm8fCv3yyI3yePE5grnUGollQyqX4zi+5y3LZbwQ==, tarball: https://npm.pkg.github.com/download/@litentry/parachain-api/0.0.1/b3a704e53159ba86af5a6a53fc13245f4a9222c7}
+    dependencies:
+      '@polkadot/api': 10.9.1
+      '@polkadot/api-augment': 10.9.1
+      '@polkadot/api-base': 10.9.1
+      '@polkadot/api-derive': 10.9.1
+      '@polkadot/keyring': 12.5.1(@polkadot/util-crypto@12.5.1)(@polkadot/util@12.5.1)
+      '@polkadot/rpc-core': 10.9.1
+      '@polkadot/types': 10.9.1
+      '@polkadot/types-augment': 10.9.1
+      '@polkadot/types-codec': 10.9.1
+      '@polkadot/types-create': 10.9.1
+      '@polkadot/types-known': 10.9.1
+      '@polkadot/types-support': 10.9.1
+      '@polkadot/util': 12.5.1
+      '@polkadot/util-crypto': 12.5.1(@polkadot/util@12.5.1)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: false
+
+  /@litentry/sidechain-api@0.0.1:
+    resolution: {integrity: sha512-ZXEdKrj5V7HI69mMuB/X4Rdze1DsLNv/xpSZoQMcaA+qf91JIjW7se/58zR/ZsIWznu/4Be/N5jojun9aGA6bA==, tarball: https://npm.pkg.github.com/download/@litentry/sidechain-api/0.0.1/46b1d96cf65b83c67121a148cf7d7b7dc587c42d}
+    dependencies:
+      '@polkadot/api': 10.9.1
+      '@polkadot/api-augment': 10.9.1
+      '@polkadot/api-base': 10.9.1
+      '@polkadot/api-derive': 10.9.1
+      '@polkadot/keyring': 12.5.1(@polkadot/util-crypto@12.5.1)(@polkadot/util@12.5.1)
+      '@polkadot/rpc-core': 10.9.1
+      '@polkadot/types': 10.9.1
+      '@polkadot/types-augment': 10.9.1
+      '@polkadot/types-codec': 10.9.1
+      '@polkadot/types-create': 10.9.1
+      '@polkadot/types-known': 10.9.1
+      '@polkadot/types-support': 10.9.1
+      '@polkadot/util': 12.5.1
+      '@polkadot/util-crypto': 12.5.1(@polkadot/util@12.5.1)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: false
 
   /@noble/curves@1.2.0:
     resolution: {integrity: sha512-oYclrNgRaM9SsBUBVbb8M6DTV7ZHRTKugureoYEncY5c65HOmRzvSiTE3y5CYaPYJA/GVkrhXEoF0M3Ya9PMnw==}

@@ -4,7 +4,7 @@ import { StorageEntryMetadataV14, SiLookupTypeId, StorageHasherV14 } from '@polk
 import { sendRequest } from '../call';
 import { blake2128Concat, twox64Concat, identity, createJsonRpcRequest, nextRequestId } from '../helpers';
 import type { IntegrationTestContext } from '../type-definitions';
-import type { PalletIdentityManagementTeeIdentityContext, LitentryPrimitivesIdentity } from 'sidechain-api';
+import type { PalletIdentityManagementTeeIdentityContext, LitentryPrimitivesIdentity } from '@litentry/sidechain-api';
 import type { HexString } from '@polkadot/util/types';
 import type { Metadata } from '@polkadot/types';
 

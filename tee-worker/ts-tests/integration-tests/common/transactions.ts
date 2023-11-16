@@ -11,7 +11,7 @@ import type { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
 import { RequestEvent } from './type-definitions';
 
 import { u8aToHex } from '@polkadot/util';
-import { FrameSystemEventRecord } from 'parachain-api';
+import { FrameSystemEventRecord } from '@litentry/parachain-api';
 
 // transaction utils
 export async function sendTxUntilInBlock(tx: SubmittableExtrinsic<ApiTypes>, signer: KeyringPair) {

@@ -26,8 +26,8 @@ import {
 } from './examples/direct-invocation/util'; // @fixme move to a better place
 import type { IntegrationTestContext } from './common/type-definitions';
 import { aesKey } from './common/call';
-import { LitentryValidationData, Web3Network } from 'parachain-api';
-import { LitentryPrimitivesIdentity } from 'sidechain-api';
+import { LitentryValidationData, Web3Network } from '@litentry/parachain-api';
+import { LitentryPrimitivesIdentity } from '@litentry/sidechain-api';
 import { Vec } from '@polkadot/types';
 import { ethers } from 'ethers';
 import type { HexString } from '@polkadot/util/types';

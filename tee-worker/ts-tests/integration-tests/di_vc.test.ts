@@ -11,7 +11,7 @@ import {
 } from './examples/direct-invocation/util'; // @fixme move to a better place
 import type { IntegrationTestContext } from './common/type-definitions';
 import { aesKey } from './common/call';
-import { LitentryPrimitivesIdentity } from 'sidechain-api';
+import { LitentryPrimitivesIdentity } from '@litentry/sidechain-api';
 import { subscribeToEventsWithExtHash } from './common/transactions';
 describe('Test Vc (direct invocation)', function () {
     let context: IntegrationTestContext = undefined as any;

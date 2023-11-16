@@ -11,8 +11,8 @@ import { step } from 'mocha-steps';
 import { sendTxsWithUtility } from './common/transactions';
 import { generateWeb3Wallets, assertIdentityLinked, assertIdentityDeactivated } from './common/utils';
 import { ethers } from 'ethers';
-import type { LitentryPrimitivesIdentity } from 'sidechain-api';
-import type { LitentryValidationData, Web3Network } from 'parachain-api';
+import type { LitentryPrimitivesIdentity } from '@litentry/sidechain-api';
+import type { LitentryValidationData, Web3Network } from '@litentry/parachain-api';
 import { Vec } from '@polkadot/types';
 
 describeLitentry('Test Batch Utility', 0, (context) => {

@@ -1,4 +1,4 @@
-import { ApiPromise } from 'parachain-api';
+import { ApiPromise } from '@litentry/parachain-api';
 import { KeyObject } from 'crypto';
 import WebSocketAsPromised from 'websocket-as-promised';
 import type { IntegrationTestContext, Web3Wallets } from '../type-definitions';

@@ -1,9 +1,9 @@
-import { ApiPromise } from 'parachain-api';
+import { ApiPromise } from '@litentry/parachain-api';
 import { KeyObject } from 'crypto';
 import WebSocketAsPromised from 'websocket-as-promised';
 import { Metadata, TypeRegistry } from '@polkadot/types';
 import { Wallet } from 'ethers';
-import type { PalletIdentityManagementTeeIdentityContext, LitentryPrimitivesIdentity } from 'sidechain-api';
+import type { PalletIdentityManagementTeeIdentityContext, LitentryPrimitivesIdentity } from '@litentry/sidechain-api';
 import type { KeyringPair } from '@polkadot/keyring/types';
 import type { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
 import type { HexString } from '@polkadot/util/types';

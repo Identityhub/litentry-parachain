@@ -48,7 +48,9 @@
         "websocket-as-promised": "^2.0.1",
         "ws": "^8.8.1",
         "parachain-api": "file:../../client-api/parachain-api",
-        "sidechain-api": "file:../../client-api/sidechain-api"
+        "sidechain-api": "file:../../client-api/sidechain-api",
+        "@litentry/parachain-api": "0.0.1",
+        "@litentry/sidechain-api": "0.0.1"
     },
     "devDependencies": {
         "@ethersproject/providers": "^5.7.2",
