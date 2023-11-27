@@ -155,12 +155,11 @@ pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 		Err(e) => return e.into(),
 	};
 
-	*unchecked_extrinsic_size = extrinsic.encode().len() as u32;
-
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::BufferError(e).into()
-	};
-
+	*unchecked_extrinsic_size =
+		match write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+			Ok(l) => l as u32,
+			Err(e) => return EnclaveError::BufferError(e).into(),
+		};
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -169,7 +168,8 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 	skip_ra: c_int,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
@@ -196,9 +196,11 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 		Err(e) => return e.into(),
 	};
 
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::BufferError(e).into()
-	};
+	*unchecked_extrinsic_size =
+		match write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+			Ok(l) => l as u32,
+			Err(e) => return EnclaveError::BufferError(e).into(),
+		};
 	sgx_status_t::SGX_SUCCESS
 }
 
@@ -278,7 +280,8 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote(
 	quote: *const u8,
 	quote_size: u32,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
 		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
@@ -300,9 +303,11 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote(
 		Err(e) => return e.into(),
 	};
 
-	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-		return EnclaveError::BufferError(e).into()
-	};
+	*unchecked_extrinsic_size =
+		match write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
+			Ok(l) => l as u32,
+			Err(e) => return EnclaveError::BufferError(e).into(),
+		};
 	sgx_status_t::SGX_SUCCESS
 }
 
