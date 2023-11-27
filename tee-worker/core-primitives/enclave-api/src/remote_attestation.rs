@@ -144,6 +144,7 @@ mod impl_ffi {
 			let mut retval = sgx_status_t::SGX_SUCCESS;
 
 			let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
+			let mut unchecked_extrinsic_size: u32 = 0;
 
 			trace!("Generating dcap_ra_extrinsic with URL: {}", w_url);
 
@@ -157,6 +158,7 @@ mod impl_ffi {
 					url.len() as u32,
 					unchecked_extrinsic.as_mut_ptr(),
 					unchecked_extrinsic.len() as u32,
+					&mut unchecked_extrinsic_size as *mut u32,
 					skip_ra.into(),
 				)
 			};
@@ -164,7 +166,7 @@ mod impl_ffi {
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
 
-			Ok(unchecked_extrinsic)
+			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
 		fn generate_dcap_ra_extrinsic_from_quote(
 			&self,

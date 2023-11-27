@@ -76,7 +76,7 @@ pub mod files {
 /// Settings concerning the worker
 pub mod worker {
 	// the maximum size of any extrinsic that the enclave will ever generate in B
-	pub const EXTRINSIC_MAX_SIZE: usize = 13_000;
+	pub const EXTRINSIC_MAX_SIZE: usize = 3200;
 	// the maximum size of the header
 	// Litentry: change it to 300 after the evm pallet being fused
 	// see https://github.com/litentry/litentry-parachain/actions/runs/6168159073/job/16742757562

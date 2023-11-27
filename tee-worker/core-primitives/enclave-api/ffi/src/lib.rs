@@ -143,7 +143,8 @@ extern "C" {
 		w_url: *const u8,
 		w_url_size: u32,
 		unchecked_extrinsic: *mut u8,
-		unchecked_extrinsic_size: u32,
+		unchecked_extrinsic_max_size: u32,
+		unchecked_extrinsic_size: *mut u32,
 		skip_ra: c_int,
 	) -> sgx_status_t;
 

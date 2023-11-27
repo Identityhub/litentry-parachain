@@ -134,7 +134,8 @@ pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 	w_url: *const u8,
 	w_url_size: u32,
 	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_size: u32,
+	unchecked_extrinsic_max_size: u32,
+	unchecked_extrinsic_size: *mut u32,
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
@@ -147,12 +148,14 @@ pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 			return EnclaveError::Other("Could not decode url slice to a valid String".into()).into(),
 	};
 	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_size as usize);
+		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
 
 	let extrinsic = match generate_ias_ra_extrinsic_internal(url, skip_ra == 1) {
 		Ok(xt) => xt,
 		Err(e) => return e.into(),
 	};
+
+	*unchecked_extrinsic_size = extrinsic.encode().len() as u32;
 
 	if let Err(e) = write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
 		return EnclaveError::BufferError(e).into()
