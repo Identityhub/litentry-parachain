@@ -41,8 +41,6 @@ export async function assertIsInSidechainBlock(callType: string, res: WorkerRpcR
         `${callType} should be trusted operation status, but is ${res.status.type}`
     );
     const status = res.status.asTrustedOperationStatus;
-    console.log(res.toHuman());
-
     assert.isTrue(
         status[0].isSubmitted || status[0].isInSidechainBlock,
         `${callType} should be submitted or in sidechain block, but is ${status[0].type}`

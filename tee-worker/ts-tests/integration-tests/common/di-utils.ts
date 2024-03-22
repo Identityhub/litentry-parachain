@@ -23,22 +23,21 @@ import { createJsonRpcRequest, nextRequestId } from './helpers';
 // the request is included in a sidechain block: the state mutation of sidechain is done, the promise is resolved
 // the corresponding parachain event should be emitted **around** that, it's not guaranteed if it's before or after this status
 // due to block inclusion delays from the parachain
-//
 async function sendRequest(
     wsClient: WebSocketAsPromised,
     request: JsonRpcRequest,
     api: ApiPromise,
     onMessageReceived?: (res: WorkerRpcReturnValue) => void
 ): Promise<WorkerRpcReturnValue> {
+    const maxAttempts = 3;
+    let attempt = 1;
     const p = new Promise<WorkerRpcReturnValue>((resolve) =>
-        wsClient.onMessage.addListener((data) => {
+        wsClient.onMessage.addListener(async (data) => {
             const parsed = JSON.parse(data);
             if (parsed.id === request.id) {
                 const result = parsed.result;
                 const res = api.createType('WorkerRpcReturnValue', result);
-
-                console.log('Got response: ' + JSON.stringify(res.toHuman()));
-
+                console.log(111111, JSON.stringify(res.toHuman(), null, 2));
                 if (res.status.isError) {
                     console.log('Rpc response error: ' + decodeRpcBytesAsString(res.value));
                 }
@@ -53,7 +52,15 @@ async function sendRequest(
                 if (res.do_watch.isFalse) {
                     // TODO: maybe only remove this listener
                     wsClient.onMessage.removeAllListeners();
-                    resolve(res);
+                    console.log(222223333, res.value.isEmpty);
+                    if (res.value.isEmpty && attempt < maxAttempts) {
+                        // If res.value is empty and we haven't reached the max attempts, send the request again
+                        attempt++;
+                        const newRes = await sendRequest(wsClient, request, api, onMessageReceived);
+                        resolve(newRes);
+                    } else {
+                        resolve(res);
+                    }
                 } else {
                     // `do_watch` is true means: hold on - there's still something coming
                     console.log('do_watch is true, continue watching ...');
