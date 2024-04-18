@@ -36,30 +36,36 @@ pub trait RangeCredentialDetail {
 	fn get_assertion_items(&self, amount: usize) -> Vec<AssertionLogic> {
 		let breakdown = self.get_breakdown();
 		let range = self.get_range();
-		let index = self.get_index(amount);
-		let items = match index {
-			Some(index) => {
-				let min = range[index - 1];
-				let max = range[index];
-				let min_item =
-					AssertionLogic::new_item(breakdown, Op::GreaterEq, &format!("{}", min));
-				let max_item =
-					AssertionLogic::new_item(breakdown, Op::LessThan, &format!("{}", max));
+		if amount > range[0] {
+			let index = self.get_index(amount);
+			let items = match index {
+				Some(index) => {
+					let min = range[index - 1];
+					let max = range[index];
+					let min_item =
+						AssertionLogic::new_item(breakdown, Op::GreaterEq, &format!("{}", min));
+					let max_item =
+						AssertionLogic::new_item(breakdown, Op::LessThan, &format!("{}", max));
 
-				vec![min_item, max_item]
-			},
-			None => {
-				// >= last value
-				let min_item = AssertionLogic::new_item(
-					breakdown,
-					Op::GreaterEq,
-					&format!("{}", self.get_last_value()),
-				);
-				vec![min_item]
-			},
-		};
+					vec![min_item, max_item]
+				},
+				None => {
+					// >= last value
+					let min_item = AssertionLogic::new_item(
+						breakdown,
+						Op::GreaterEq,
+						&format!("{}", self.get_last_value()),
+					);
+					vec![min_item]
+				},
+			};
 
-		items
+			items
+		} else {
+			let range0 = range[0];
+			let item = AssertionLogic::new_item(breakdown, Op::LessEq, &format!("{}", range0));
+			vec![item]
+		}
 	}
 }
 
