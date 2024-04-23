@@ -31,7 +31,7 @@ name: General CI
 on:
   push:
     branches:
-      - dev
+      - twitter-oauth-verification
     paths-ignore:
       - "**/dependabot.yml"
       - "**/README.md"
