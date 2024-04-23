@@ -54,7 +54,7 @@ export async function buildValidations(
     signerIdentitity: CorePrimitivesIdentity,
     linkIdentity: CorePrimitivesIdentity,
     startingSidechainNonce: number,
-    network: 'ethereum' | 'substrate' | 'twitter' | 'bitcoin' | 'solana',
+    network: 'ethereum' | 'substrate' | 'bitcoin' | 'solana',
     signer?: Signer
 ): Promise<LitentryValidationData> {
     const validationNonce = startingSidechainNonce++;
@@ -118,19 +118,6 @@ export async function buildValidations(
         return context.api.createType('LitentryValidationData', bitcoinValidationData);
     }
 
-    if (network === 'twitter') {
-        console.log('post verification msg to twitter: ', msg);
-        const twitterValidationData = {
-            Web2Validation: {
-                Twitter: {
-                    tweet_id: `0x${Buffer.from(validationNonce.toString(), 'utf8').toString('hex')}`,
-                },
-            },
-        };
-
-        return context.api.createType('LitentryValidationData', twitterValidationData);
-    }
-
     if (network === 'solana') {
         const solanaValidationData = {
             Web3Validation: {
@@ -151,4 +138,37 @@ export async function buildValidations(
     }
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);
+}
+
+export async function buildTwitterValidations(
+    context: IntegrationTestContext,
+    signerIdentitity: CorePrimitivesIdentity,
+    linkIdentity: CorePrimitivesIdentity,
+    verificationType: 'PublicTweet' | 'OAuth2',
+    validationNonce: number
+): Promise<LitentryValidationData> {
+    const msg = generateVerificationMessage(context, signerIdentitity, linkIdentity, validationNonce);
+    console.log('post verification msg to twitter: ', msg);
+
+    const twitterValidationData = {
+        Web2Validation: {
+            Twitter: {},
+        },
+    };
+
+    if (verificationType === 'PublicTweet') {
+        twitterValidationData.Web2Validation.Twitter = {
+            PublicTweet: {
+                tweet_id: `0x${Buffer.from(validationNonce.toString(), 'utf8').toString('hex')}`,
+            },
+        };
+    } else {
+        twitterValidationData.Web2Validation.Twitter = {
+            OAuth2: {
+                access_token: `0x${Buffer.from('test-user-access-token', 'utf8').toString('hex')}`,
+            },
+        };
+    }
+
+    return context.api.createType('LitentryValidationData', twitterValidationData);
 }
