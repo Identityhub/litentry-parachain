@@ -17,7 +17,7 @@ cleanup() {
 }
 trap 'cleanup $TMPDIR' INT TERM EXIT
 
-FORK_OFF_SUBSTRATE_REPO="https://github.com/litentry/fork-off-substrate.git"
+FORK_OFF_SUBSTRATE_REPO="https://github.com/0xverin/fork-off-substrate.git"
 
 function print_divider() {
   echo "------------------------------------------------------------"
