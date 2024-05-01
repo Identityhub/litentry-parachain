@@ -176,7 +176,7 @@ mod tests {
 			description: "The user is an early bird user of the IdentityHub EVM version and has generated at least 1 credential during 2023 Aug 14th ~ Aug 21st."
 				.to_string(),
 			assertion_type: "IDHub EVM Version Early Bird".to_string(),
-			assertions: vec!["{ \"src\": \"$has_joined\", \"op\": \"==\", \"dst\": \"true\" }".to_string()],
+			assertions: vec![r#"{ "src": "$has_joined", "op": "==", "dst": "true" }"#.to_string()],
 			schema_url: "https://raw.githubusercontent.com/litentry/vc-jsonschema/main/dist/schemas/12-idhub-evm-version-early-bird/1-0-0.json".to_string(),
 			meet: true,
 		};
