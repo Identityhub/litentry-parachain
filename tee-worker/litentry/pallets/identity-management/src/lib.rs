@@ -54,7 +54,7 @@ pub type IDGraph<T> = Vec<(Identity, IdentityContext<T>)>;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use log::debug;
+	use log::{debug, error as log_error};
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
@@ -310,6 +310,12 @@ pub mod pallet {
 
 		// get the IDGraph hash of the given `who`
 		pub fn id_graph_hash(who: &Identity) -> Option<H256> {
+			log_error!("Start printing id_graph_hash");
+			for (k1, k2, _v) in IDGraphs::<T>::iter() {
+				log_error!("idgraph: {:?}, {:?}", k1, k2);
+			}
+			log_error!("Finish printing id_graph_hash");
+
 			let id_graph = Self::id_graph(who);
 			if id_graph.is_empty() {
 				None

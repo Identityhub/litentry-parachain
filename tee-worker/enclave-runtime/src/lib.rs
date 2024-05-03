@@ -50,7 +50,7 @@ use crate::{
 		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE, GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT,
 		GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE,
-		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
+		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 	},
 	rpc::worker_api_direct::sidechain_io_handler,
 	utils::{
@@ -62,6 +62,7 @@ use crate::{
 };
 use codec::Decode;
 use core::ffi::c_int;
+use ita_sgx_runtime::IdentityManagement;
 use itc_parentchain::{
 	block_import_dispatcher::DispatchBlockImport,
 	light_client::{concurrent_access::ValidatorAccess, Validator},
@@ -73,11 +74,13 @@ use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
 
+use itp_rpc::RpcReturnValue;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
-use itp_types::{ShardIdentifier, SignedBlock};
+use itp_types::{DirectRequestStatus, Index, RsaRequest, ShardIdentifier, SignedBlock, H256};
 use itp_utils::write_slice_and_whitespace_pad;
+use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use litentry_macros::if_development_or;
 use log::*;
 use once_cell::sync::OnceCell;
@@ -89,6 +92,9 @@ use std::{
 	string::{String, ToString},
 	vec::Vec,
 };
+use litentry_primitives::Identity;
+use itp_stf_state_handler::handle_state::HandleState;
+use itp_sgx_externalities::SgxExternalitiesTrait;
 
 mod attestation;
 mod empty_impls;
@@ -487,13 +493,30 @@ pub unsafe extern "C" fn migrate_shard(
 	let old_shard_identifier =
 		ShardIdentifier::from_slice(slice::from_raw_parts(old_shard, shard_size as usize));
 
-	let new_shard_identifier =
-		ShardIdentifier::from_slice(slice::from_raw_parts(new_shard, shard_size as usize));
+	// let new_shard_identifier =
+	// 	ShardIdentifier::from_slice(slice::from_raw_parts(new_shard, shard_size as usize));
 
-	if let Err(e) = initialization::migrate_shard(old_shard_identifier, new_shard_identifier) {
-		error!("Failed to initialize shard ({:?}): {:?}", old_shard_identifier, e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
+	// if let Err(e) = initialization::migrate_shard(old_shard_identifier, new_shard_identifier) {
+	// 	error!("Failed to initialize shard ({:?}): {:?}", old_shard_identifier, e);
+	// 	return sgx_status_t::SGX_ERROR_UNEXPECTED
+	// }
+
+	let shard = old_shard_identifier.clone();
+	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get().unwrap();
+	let state = GLOBAL_STATE_HANDLER_COMPONENT.get().unwrap();
+
+	let local_top_pool_author = top_pool_author.clone();
+	let local_state = state.clone();
+
+	match local_state.load_cloned(&shard) {
+		Ok((mut state, _hash)) => {
+			let who = Identity::Evm(Default::default());
+			let nonce = state.execute_with(|| IdentityManagement::id_graph_hash(&who));
+		},
+		Err(e) => {
+			let error_msg = format!("load shard failure due to: {:?}", e);
+		},
+	};
 
 	sgx_status_t::SGX_SUCCESS
 }

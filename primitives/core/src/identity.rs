@@ -127,10 +127,14 @@ impl<'a> TryFrom<&'a [u8]> for Address20 {
 
 impl Debug for Address20 {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-		if_development_or!(
-			f.debug_tuple("Address20").field(&self.0).finish(),
-			f.debug_tuple("Address20").finish()
-		)
+		// if_development_or!(
+		// 	f.debug_tuple("Address20").field(&self.0).finish(),
+		// 	f.debug_tuple("Address20").finish()
+		// )
+		for byte in self.0.iter() {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
 	}
 }
 
@@ -197,10 +201,15 @@ impl From<ed25519::Public> for Address32 {
 
 impl Debug for Address32 {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-		if_development_or!(
-			f.debug_tuple("Address32").field(&self.0).finish(),
-			f.debug_tuple("Address32").finish()
-		)
+		// if_development_or!(
+		// 	f.debug_tuple("Address32").field(&self.0).finish(),
+		// 	f.debug_tuple("Address32").finish()
+		// )
+
+		for byte in self.0.iter() {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
 	}
 }
 
@@ -259,10 +268,15 @@ impl From<ecdsa::Public> for Address33 {
 
 impl Debug for Address33 {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-		if_development_or!(
-			f.debug_tuple("Address33").field(&self.0).finish(),
-			f.debug_tuple("Address33").finish()
-		)
+		// if_development_or!(
+		// 	f.debug_tuple("Address33").field(&self.0).finish(),
+		// 	f.debug_tuple("Address33").finish()
+		// )
+
+		for byte in self.0.iter() {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
 	}
 }
 
