@@ -366,8 +366,12 @@ export const getIdGraphHash = async (
     );
     const getter = context.api.createType('Getter', { public: getterPublic });
     const res = await sendRequestFromGetter(context, teeShieldingKey, getter);
-    const hash = context.api.createType('Option<Bytes>', hexToU8a(res.value.toHex())).unwrap();
-    return context.api.createType('H256', hash);
+    const hash = context.api.createType('Option<Bytes>', hexToU8a(res.value.toHex()));
+    if (hash.isNone) {
+        console.log('>> Got response from getter: ' + JSON.stringify(res.toHuman(), null, 2));
+        throw new Error('IdGraph hash is None');
+    }
+    return context.api.createType('H256', hash.unwrap());
 };
 
 export const sendRequestFromTrustedCall = async (
