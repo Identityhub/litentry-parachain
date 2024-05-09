@@ -215,121 +215,121 @@ jobs:
           interval: 300
           branch: dev
 
-  # parachain-clippy:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - fmt
-  #     - set-condition
-  #     - sequentialise
-  #   if: needs.set-condition.outputs.rebuild_parachain == 'true'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Install rust toolchain
-  #       run: rustup show
-  #
-  #     - name: Install dependencies
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-  #
-  #     - name: Run cargo clippy check
-  #       run: make clippy
-  #
-  #     - name: Fail early
-  #       if: failure()
-  #       uses: andymckay/cancel-action@0.4
+  parachain-clippy:
+    runs-on: ubuntu-latest
+    needs:
+      - fmt
+      - set-condition
+      - sequentialise
+    if: needs.set-condition.outputs.rebuild_parachain == 'true'
+    steps:
+      - uses: actions/checkout@v4
 
-  # tee-clippy:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - fmt
-  #     - set-condition
-  #     - sequentialise
-  #   if: needs.set-condition.outputs.rebuild_tee == 'true'
-  #   container: "litentry/litentry-tee-dev:latest"
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Install dependencies
-  #       run: |
-  #         sudo apt-get update && \
-  #         sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-  #
-  #     - name: Pallet unittests
-  #       working-directory: ./tee-worker
-  #       run: |
-  #         cargo test --release -p pallet-* --lib
-  #         cargo test --release -p lc-* --lib
-  #         cargo test --release -p litentry-primitives --lib
-  #
-  #     - name: Tee-worker clippy
-  #       working-directory: ./tee-worker
-  #       run: |
-  #         echo "::group::cargo clippy no features"
-  #         cargo clippy --release -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy sidechain"
-  #         cargo clippy --release --features sidechain -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy evm"
-  #         cargo clippy --release --features evm -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy offchain-worker"
-  #         cargo clippy --release --features offchain-worker -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy development"
-  #         cargo clippy --release --features development -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy sidechain development"
-  #         cargo clippy --release --features sidechain,development -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy evm development"
-  #         cargo clippy --release --features evm,development -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy offchain-worker develpment"
-  #         cargo clippy --release --features offchain-worker,development -- -D warnings
-  #         echo "::endgroup::"
-  #
-  #     - name: Clean up disk
-  #       working-directory: ./tee-worker
-  #       run: |
-  #         echo "::group::Show disk usage"
-  #         df -h .
-  #         echo "::endgroup::"
-  #         cargo clean --profile release
-  #         echo "::group::Show disk usage"
-  #         df -h .
-  #         echo "::endgroup::"
-  #
-  #     - name: Tee-enclave clippy
-  #       working-directory: ./tee-worker/enclave-runtime
-  #       run: |
-  #         echo "::group::cargo clippy no features"
-  #         cargo clippy --release -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy sidechain"
-  #         cargo clippy --release --features sidechain -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy offchain-worker"
-  #         cargo clippy --release --features offchain-worker -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy development"
-  #         cargo clippy --release --features development -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy sidechain development"
-  #         cargo clippy --release --features sidechain,development -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy evm development"
-  #         cargo clippy --release --features evm,development -- -D warnings
-  #         echo "::endgroup::"
-  #         echo "::group::cargo clippy offchain-worker develpment"
-  #         cargo clippy --release --features offchain-worker,development -- -D warnings
-  #         echo "::endgroup::"
-  #
-  #     - name: Fail early
-  #       if: failure()
-  #       uses: andymckay/cancel-action@0.4
+      - name: Install rust toolchain
+        run: rustup show
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+
+      - name: Run cargo clippy check
+        run: make clippy
+
+      - name: Fail early
+        if: failure()
+        uses: andymckay/cancel-action@0.4
+
+  tee-clippy:
+    runs-on: ubuntu-latest
+    needs:
+      - fmt
+      - set-condition
+      - sequentialise
+    if: needs.set-condition.outputs.rebuild_tee == 'true'
+    container: "litentry/litentry-tee-dev:latest"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && \
+          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+
+      # - name: Pallet unittests
+      #   working-directory: ./tee-worker
+      #   run: |
+      #     cargo test --release -p pallet-* --lib
+      #     cargo test --release -p lc-* --lib
+      #     cargo test --release -p litentry-primitives --lib
+
+      # - name: Tee-worker clippy
+      #   working-directory: ./tee-worker
+      #   run: |
+      #     echo "::group::cargo clippy no features"
+      #     cargo clippy --release -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy sidechain"
+      #     cargo clippy --release --features sidechain -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy evm"
+      #     cargo clippy --release --features evm -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy offchain-worker"
+      #     cargo clippy --release --features offchain-worker -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy development"
+      #     cargo clippy --release --features development -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy sidechain development"
+      #     cargo clippy --release --features sidechain,development -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy evm development"
+      #     cargo clippy --release --features evm,development -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy offchain-worker develpment"
+      #     cargo clippy --release --features offchain-worker,development -- -D warnings
+      #     echo "::endgroup::"
+
+      - name: Clean up disk
+        working-directory: ./tee-worker
+        run: |
+          echo "::group::Show disk usage"
+          df -h .
+          echo "::endgroup::"
+          cargo clean --profile release
+          echo "::group::Show disk usage"
+          df -h .
+          echo "::endgroup::"
+
+      # - name: Tee-enclave clippy
+      #   working-directory: ./tee-worker/enclave-runtime
+      #   run: |
+      #     echo "::group::cargo clippy no features"
+      #     cargo clippy --release -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy sidechain"
+      #     cargo clippy --release --features sidechain -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy offchain-worker"
+      #     cargo clippy --release --features offchain-worker -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy development"
+      #     cargo clippy --release --features development -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy sidechain development"
+      #     cargo clippy --release --features sidechain,development -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy evm development"
+      #     cargo clippy --release --features evm,development -- -D warnings
+      #     echo "::endgroup::"
+      #     echo "::group::cargo clippy offchain-worker develpment"
+      #     cargo clippy --release --features offchain-worker,development -- -D warnings
+      #     echo "::endgroup::"
+
+      - name: Fail early
+        if: failure()
+        uses: andymckay/cancel-action@0.4
 
   bitacross-clippy:
     runs-on: ubuntu-latest
@@ -706,91 +706,91 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.4
 
-  # tee-single-worker-test:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - set-condition
-  #     - parachain-build-dev
-  #     - tee-build
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include:
-  #         # Litentry
-  #         - test_name: lit-di-substrate-identity-test
-  #         - test_name: lit-di-evm-identity-test
-  #         - test_name: lit-di-bitcoin-identity-test
-  #         - test_name: lit-di-solana-identity-test
-  #         - test_name: lit-di-vc-test
-  #         - test_name: lit-dr-vc-test
-  #         - test_name: lit-parentchain-nonce
-  #         - test_name: lit-test-failed-parentchain-extrinsic
-  #         - test_name: lit-scheduled-enclave-test
-  #         - test_name: lit-twitter-identity-test
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Pull polkadot image
-  #       run: |
-  #         docker pull parity/polkadot
-  #
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         name: litentry-parachain-dev
-  #
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         name: litentry-tee
-  #
-  #     - name: Load docker image
-  #       run: |
-  #         docker load < litentry-parachain-dev.tar.gz
-  #         docker load < litentry-tee.tar.gz
-  #         docker images
-  #
-  #     - name: Enable corepack and pnpm
-  #       run: corepack enable && corepack enable pnpm
-  #
-  #     - name: Generate parachain artefacts
-  #       run: |
-  #         ./tee-worker/scripts/litentry/generate_parachain_artefacts.sh
-  #         ls -l docker/generated-rococo/
-  #         ls -l tee-worker/docker/litentry/
-  #
-  #     - name: Build litentry parachain docker images
-  #       run: |
-  #         cd tee-worker/docker
-  #         docker compose -f litentry-parachain.build.yml build
-  #
-  #     - name: Integration single worker test ${{ matrix.test_name }}
-  #       if: needs.set-condition.outputs.run_tee_test == 'true'
-  #       timeout-minutes: 40
-  #       run: |
-  #         cd tee-worker/docker
-  #         docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
-  #
-  #     - name: Stop integration single worker docker containers
-  #       if: needs.set-condition.outputs.run_tee_test == 'true'
-  #       run: |
-  #         cd tee-worker/docker
-  #         docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
-  #
-  #     - name: Collect docker logs if test fails
-  #       continue-on-error: true
-  #       uses: jwalton/gh-docker-logs@v2
-  #       if: failure()
-  #       with:
-  #         tail: all
-  #         dest: docker-logs
-  #
-  #     - name: Upload docker logs if test fails
-  #       uses: actions/upload-artifact@v4
-  #       if: failure()
-  #       with:
-  #         name: ${{ matrix.test_name }}-docker-logs
-  #         path: docker-logs
-  #         if-no-files-found: ignore
-  #         retention-days: 3
+  tee-single-worker-test:
+    runs-on: ubuntu-latest
+    needs:
+      - set-condition
+      - parachain-build-dev
+      - tee-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Litentry
+          - test_name: lit-di-substrate-identity-test
+          # - test_name: lit-di-evm-identity-test
+          # - test_name: lit-di-bitcoin-identity-test
+          # - test_name: lit-di-solana-identity-test
+          # - test_name: lit-di-vc-test
+          # - test_name: lit-dr-vc-test
+          # - test_name: lit-parentchain-nonce
+          # - test_name: lit-test-failed-parentchain-extrinsic
+          # - test_name: lit-scheduled-enclave-test
+          # - test_name: lit-twitter-identity-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull polkadot image
+        run: |
+          docker pull parity/polkadot
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: litentry-parachain-dev
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: litentry-tee
+
+      - name: Load docker image
+        run: |
+          docker load < litentry-parachain-dev.tar.gz
+          docker load < litentry-tee.tar.gz
+          docker images
+
+      - name: Enable corepack and pnpm
+        run: corepack enable && corepack enable pnpm
+
+      - name: Generate parachain artefacts
+        run: |
+          ./tee-worker/scripts/litentry/generate_parachain_artefacts.sh
+          ls -l docker/generated-rococo/
+          ls -l tee-worker/docker/litentry/
+
+      - name: Build litentry parachain docker images
+        run: |
+          cd tee-worker/docker
+          docker compose -f litentry-parachain.build.yml build
+
+      - name: Integration single worker test ${{ matrix.test_name }}
+        if: needs.set-condition.outputs.run_tee_test == 'true'
+        timeout-minutes: 40
+        run: |
+          cd tee-worker/docker
+          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
+
+      - name: Stop integration single worker docker containers
+        if: needs.set-condition.outputs.run_tee_test == 'true'
+        run: |
+          cd tee-worker/docker
+          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+
+      - name: Collect docker logs if test fails
+        continue-on-error: true
+        uses: jwalton/gh-docker-logs@v2
+        if: failure()
+        with:
+          tail: all
+          dest: docker-logs
+
+      - name: Upload docker logs if test fails
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-docker-logs
+          path: docker-logs
+          if-no-files-found: ignore
+          retention-days: 3
 
   tee-multi-worker-test:
     runs-on: ubuntu-latest
