@@ -31,7 +31,7 @@ name: General CI
 on:
   push:
     branches:
-      - lit-di-substrate-identity-multiworker-tests-failure
+      - p-720-substrate-identity-multiworker-test-fails
     paths-ignore:
       - "**/dependabot.yml"
       - "**/README.md"
