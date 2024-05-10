@@ -59,20 +59,11 @@ async function sendRequest(
                 // sending every response we receive from websocket
                 if (onMessageReceived) onMessageReceived(res);
 
-                console.log('res.do_watch.isFalse: ', res.do_watch.isFalse);
-                if (res.status.isTrustedOperationStatus) {
-                    console.log('Is final status: ', res.status.asTrustedOperationStatus[0].isFinalized);
-                }
-
                 // resolve it once `do_watch` is false, meaning it's the final response
                 if (res.do_watch.isFalse) {
-                    if (res.status.isTrustedOperationStatus && !res.status.asTrustedOperationStatus[0].isFinalized) {
-                        console.log('Trusted operation is not finalized yet, continue watching ...');
-                    } else {
-                        // TODO: maybe only remove this listener
-                        wsClient.onMessage.removeAllListeners();
-                        resolve(res);
-                    }
+                    // TODO: maybe only remove this listener
+                    wsClient.onMessage.removeAllListeners();
+                    resolve(res);
                 } else {
                     // `do_watch` is true means: hold on - there's still something coming
                     console.log('do_watch is true, continue watching ...');
