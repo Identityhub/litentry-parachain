@@ -310,6 +310,15 @@ describe('Test Identity (direct invocation)', function () {
     });
 
     step('linking already linked identity', async function () {
+        const idGraphGetter = await createSignedTrustedGetterIdGraph(
+            context.api,
+            context.web3Wallets.substrate.Alice,
+            aliceSubstrateIdentity
+        );
+        const getterResponse = await sendRequestFromGetter(context, teeShieldingKey, idGraphGetter);
+        const idGraph = decodeIdGraph(context.sidechainRegistry, getterResponse.value);
+        console.log('[linking already linked identity] idGraph before', idGraph.toHuman());
+
         const twitterNonce = aliceCurrentNonce++;
 
         const twitterIdentity = await buildIdentityHelper('mock_user', 'Twitter', context);
@@ -336,6 +345,8 @@ describe('Test Identity (direct invocation)', function () {
             requestIdentifier
         );
         const res = await sendRequestFromTrustedCall(context, teeShieldingKey, linkIdentityCall);
+
+        console.log('[linking already linked identity] linkIdentityCall returned', res.toHuman());
 
         assert.isTrue(res.do_watch.isFalse);
         assert.isTrue(res.status.asTrustedOperationStatus[0].isInvalid);
