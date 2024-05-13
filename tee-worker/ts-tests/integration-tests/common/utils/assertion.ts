@@ -76,6 +76,7 @@ export async function assertIdGraphMutationResult(
     assert.isNotNull(decodedResult.mutated_id_graph);
     const idGraph = parseIdGraph(context.sidechainRegistry, decodedResult.mutated_id_graph, aesKey);
     assertIdGraph(idGraph, expectedIdGraph);
+    console.log(colors.green('assertIdGraph passed'));
     const queriedIdGraphHash = (await getIdGraphHash(context, teeShieldingKey, identity)).toHex();
     assert.equal(u8aToHex(decodedResult.id_graph_hash), queriedIdGraphHash);
 

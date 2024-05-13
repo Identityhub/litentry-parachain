@@ -199,6 +199,8 @@ describe('Test Identity (direct invocation)', function () {
             );
 
             const res = await sendRequestFromTrustedCall(context, teeShieldingKey, linkIdentityCall);
+            console.log('Waiting for state changes to be propagated');
+            sleep(20);
 
             idGraphHashResults.push(
                 await assertIdGraphMutationResult(
