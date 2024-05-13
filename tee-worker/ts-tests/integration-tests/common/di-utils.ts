@@ -411,7 +411,7 @@ export const sendRequestFromGetter = async (
     const request = createJsonRpcRequest('state_executeGetter', [u8aToHex(requestParam)], nextRequestId(context));
     // in multiworker setup in some cases state might not be immediately propagated to other nodes so we wait 1 sec
     // hopefully we will query correct state
-    await sleep(1);
+    await sleep(6);
     return sendRequest(context.tee, request, context.api);
 };
 
