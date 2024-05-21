@@ -65,7 +65,7 @@ jobs:
 
       - name: Setup npm config
         run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
+          echo "//registry.npmjs.org/:_authToken=\${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
           npm token list
 
       - name: Publish parachain API and sidechain API
