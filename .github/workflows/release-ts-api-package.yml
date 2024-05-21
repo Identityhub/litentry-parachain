@@ -22,7 +22,7 @@ jobs:
           PARACHAIN_DOCKER_TAG=$(echo ${{inputs.release-tag}} | cut -d'-' -f1 | sed 's/p/v/')
           echo "PARACHAIN_DOCKER_TAG=$PARACHAIN_DOCKER_TAG" >> $GITHUB_ENV
 
-          WORKER_DOCKER_TAG=$(echo ${{inputs.release-tag}}  | sed 's/.*w/v/;s/-.*//')
+          WORKER_DOCKER_TAG=$(echo ${{ env.release-tag }} | cut -d'-' -f3 | sed 's/w/v/')
           echo "WORKER_DOCKER_TAG=$WORKER_DOCKER_TAG" >> $GITHUB_ENV
 
       - name: Pull litentry image optionally
@@ -64,7 +64,7 @@ jobs:
 
       - name: Setup npm config
         run: |
-          echo "//registry.npmjs.org/:_authToken=\${{ secrets.NPM_TOKEN }}" > .npmrc
+          echo "//registry.npmjs.org/:_authToken=\${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
 
       - name: Publish parachain API and sidechain API
         working-directory: ./tee-worker/client-api
@@ -80,7 +80,11 @@ jobs:
               echo "$api dist and build files do not exist. Publishing failed."
               exit 1
             fi
-            npm publish --tag ${{ inputs.release-tag }}
+            if [[ "${{ inputs.release-tag }}" == "latest" ]]; then
+              npm publish --tag latest
+            else
+              npm publish --tag next
+            fi
 
             echo "------------------------$api published------------------------"
             cd ..
