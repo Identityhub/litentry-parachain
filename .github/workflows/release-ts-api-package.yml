@@ -66,6 +66,7 @@ jobs:
       - name: Setup npm config
         run: |
           echo "//registry.npmjs.org/:_authToken=\${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
+          npm config set @litentry:registry https://registry.npmjs.org
 
       - name: Publish parachain API and sidechain API
         working-directory: ./tee-worker/client-api
