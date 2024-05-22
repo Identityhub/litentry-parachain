@@ -12,6 +12,8 @@ export * from "@polkadot/types/lookup";
 export * from "../build/interfaces";
 export * from "@polkadot/api";
 export * from "@polkadot/api/types";
+import parachainMetadata from "../build/litentry-parachain-metadata.json";
+export { parachainMetadata };
 import { default as identity } from "../build/interfaces/identity/definitions";
 import { default as vc } from "../build/interfaces/vc/definitions";
 import { default as trusted_operations } from "../build/interfaces/trusted_operations/definitions";

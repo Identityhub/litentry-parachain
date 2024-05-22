@@ -23,6 +23,7 @@
         "baseUrl": "."
     },
     "exclude": ["./dist", "./prepare-build"],
+    "include": ["./build/interfaces", "./build/*.json", "./src/*.ts"],
     "ts-node": {
         "esm": true,
         "experimentalResolver": true,
