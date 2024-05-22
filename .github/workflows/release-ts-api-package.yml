@@ -22,7 +22,7 @@ jobs:
           PARACHAIN_DOCKER_TAG=$(echo ${{inputs.release-tag}} | cut -d'-' -f1 | sed 's/p/v/')
           echo "PARACHAIN_DOCKER_TAG=$PARACHAIN_DOCKER_TAG" >> $GITHUB_ENV
 
-          WORKER_DOCKER_TAG=$(echo ${{ inputs.release-tag }} | cut -d'-' -f3 | sed 's/w/v/')
+          WORKER_DOCKER_TAG=v0.0.2-106
           echo "WORKER_DOCKER_TAG=$WORKER_DOCKER_TAG" >> $GITHUB_ENV
 
 
