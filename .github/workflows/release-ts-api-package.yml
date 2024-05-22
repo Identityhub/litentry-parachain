@@ -19,21 +19,25 @@ jobs:
       - name: Set ENV
         run: |
           # extracting parachain version and worker version from release tag
-          echo "PARACHAIN_TAG=$(echo ${{inputs.release-tag}} | sed 's/p/v/;s/\(.*\)-w.*/\1/')" >> $GITHUB_ENV
-          echo "WORKER_TAG=$(echo ${{inputs.release-tag}} | sed 's/.*\(w.*\)/\1/;s/w/v/')" >> $GITHUB_ENV
+          PARACHAIN_DOCKER_TAG=$(echo ${{inputs.release-tag}} | cut -d'-' -f1 | sed 's/p/v/')
+          echo "PARACHAIN_DOCKER_TAG=$PARACHAIN_DOCKER_TAG" >> $GITHUB_ENV
+
+          WORKER_DOCKER_TAG=$(echo ${{ inputs.release-tag }} | cut -d'-' -f3 | sed 's/w/v/')
+          echo "WORKER_DOCKER_TAG=$WORKER_DOCKER_TAG" >> $GITHUB_ENV
+
 
       - name: Pull litentry image optionally
         run: |
           docker pull parity/polkadot
-          docker pull litentry/litentry-worker:$WORKER_TAG
-          docker pull litentry/litentry-cli:$WORKER_TAG
-          docker pull litentry/litentry-parachain:$PARACHAIN_TAG
+          docker pull litentry/litentry-worker:$WORKER_DOCKER_TAG
+          docker pull litentry/litentry-cli:$WORKER_DOCKER_TAG
+          docker pull litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG
 
       - name: Re-tag docker image
         run: |
-          docker tag litentry/litentry-worker:$WORKER_TAG litentry/litentry-worker:latest
-          docker tag litentry/litentry-cli:$WORKER_TAG litentry/litentry-cli:latest
-          docker tag litentry/litentry-parachain:$PARACHAIN_TAG litentry/litentry-parachain:latest
+          docker tag litentry/litentry-worker:$WORKER_DOCKER_TAG litentry/litentry-worker:latest
+          docker tag litentry/litentry-cli:$WORKER_DOCKER_TAG litentry/litentry-cli:latest
+          docker tag litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG litentry/litentry-parachain:latest
 
       - run: docker images --all
 
@@ -58,12 +62,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          registry-url: https://npm.pkg.github.com/
+          registry-url: "https://registry.npmjs.org"
 
       - name: Setup npm config
         run: |
-          echo "//npm.pkg.github.com/:_authToken=\${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
-          npm config set @litentry:registry https://npm.pkg.github.com
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.RELEASE_TS_API_PACKAGE_TOKEN }}" > .npmrc
 
       - name: Publish parachain API and sidechain API
         working-directory: ./tee-worker/client-api
@@ -79,7 +82,11 @@ jobs:
               echo "$api dist and build files do not exist. Publishing failed."
               exit 1
             fi
-            npm publish --tag ${{ inputs.release-tag }}
+            if [[ "${{ inputs.release-tag }}" == "latest" ]]; then
+              npm publish --tag latest
+            else
+              npm publish --tag next
+            fi
 
             echo "------------------------$api published------------------------"
             cd ..
