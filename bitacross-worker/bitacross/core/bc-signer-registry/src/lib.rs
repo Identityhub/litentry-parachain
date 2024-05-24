@@ -134,6 +134,7 @@ pub trait SignerRegistryUpdater {
 	fn init(&self) -> RegistryResult<()>;
 	fn update(&self, account: Address32, key: PubKey) -> RegistryResult<()>;
 	fn remove(&self, account: Address32) -> RegistryResult<()>;
+	fn write_state(&self, new_state: Vec<(Address32, PubKey)>) -> RegistryResult<()>;
 }
 
 pub trait SignerRegistryLookup {
@@ -189,6 +190,18 @@ impl SignerRegistryUpdater for SignerRegistry {
 		Ok(())
 	}
 
+	#[cfg(feature = "std")]
+	fn write_state(&self, new_state: Vec<(Address32, PubKey)>) -> RegistryResult<()> {
+		let mut registry = self.registry.write().unwrap();
+
+		registry.clear();
+
+		for new_pair in new_state {
+			registry.insert(new_pair.0, new_pair.1);
+		}
+		Ok(())
+	}
+
 	// if `SIGNER_REGISTRY_FILE` exists, unseal and init from it
 	// otherwise create a new instance and seal to static file
 	#[cfg(feature = "sgx")]
@@ -226,6 +239,18 @@ impl SignerRegistryUpdater for SignerRegistry {
 			return SignerRegistrySeal::new(self.seal_path.clone()).seal(&*registry)
 		}
 		Ok(())
+	}
+
+	#[cfg(feature = "sgx")]
+	fn write_state(&self, new_state: Vec<(Address32, PubKey)>) -> RegistryResult<()> {
+		let mut registry =
+			GLOBAL_SIGNER_REGISTRY.registry.write().map_err(|_| RegistryError::PoisonLock)?;
+		registry.clear();
+
+		for new_pair in new_state {
+			registry.insert(new_pair.0, new_pair.1);
+		}
+		return SignerRegistrySeal::new(self.seal_path.clone()).seal(&*registry)
 	}
 }
 

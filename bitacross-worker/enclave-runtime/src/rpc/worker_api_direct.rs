@@ -15,6 +15,8 @@
 
 */
 
+#![allow(clippy::unwrap_used)]
+
 use crate::{
 	attestation::{
 		generate_dcap_ra_extrinsic_from_quote_internal,
@@ -30,7 +32,7 @@ use crate::{
 	},
 };
 use bc_musig2_ceremony::{generate_aggregated_public_key, PublicKey};
-use bc_signer_registry::SignerRegistryLookup;
+use bc_signer_registry::{PubKey, SignerRegistryLookup, SignerRegistryUpdater};
 use bc_task_sender::{BitAcrossProcessingResult, BitAcrossRequest, BitAcrossRequestSender};
 use codec::Encode;
 use core::result::Result;
@@ -55,12 +57,13 @@ use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use lc_scheduled_enclave::ScheduledEnclaveUpdater;
 use lc_scheduled_enclave::GLOBAL_SCHEDULED_ENCLAVE;
 use litentry_macros::if_development;
-use litentry_primitives::{AesRequest, DecryptableRequest};
+use litentry_primitives::{Address32, AesRequest, DecryptableRequest};
 use log::debug;
+use serde::{Deserialize, Serialize};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::crypto::Pair;
 use sp_runtime::OpaqueExtrinsic;
-use std::{borrow::ToOwned, format, str, string::String, sync::Arc, vec::Vec};
+use std::{borrow::ToOwned, convert::TryInto, format, str, string::String, sync::Arc, vec::Vec};
 
 fn compute_hex_encoded_return_error(error_msg: &str) -> String {
 	RpcReturnValue::from_error_message(error_msg).to_hex()
@@ -74,6 +77,12 @@ fn get_all_rpc_methods_string(io_handler: &IoHandler) -> String {
 		.join(", ");
 
 	format!("methods: [{}]", method_string)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
+struct SealedSigner {
+	signer: Vec<u8>,
+	key: Vec<u8>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -94,11 +103,13 @@ where
 	<AccessShieldingKey as AccessKey>::KeyType:
 		ShieldingCryptoDecrypt + ShieldingCryptoEncrypt + DeriveEd25519 + Send + Sync + 'static,
 	OcallApi: EnclaveAttestationOCallApi + Send + Sync + 'static,
-	SR: SignerRegistryLookup + Send + Sync + 'static,
+	SR: SignerRegistryLookup + SignerRegistryUpdater + Send + Sync + 'static,
 {
 	let mut io = IoHandler::new();
 
 	let signer_lookup_cloned = signer_lookup.clone();
+	let another_signer_lookup_cloned = signer_lookup.clone();
+
 	let shielding_key_cloned = shielding_key.clone();
 	io.add_sync_method("author_getShieldingKey", move |_: Params| {
 		debug!("worker_api_direct rpc was called: author_getShieldingKey");
@@ -208,17 +219,49 @@ where
 	io.add_sync_method("bitacross_getSealedSigners", move |_: Params| {
 		debug!("worker_api_direct rpc was called: bitacross_getSealedSigners");
 
-		let keys: Vec<Value> = signer_lookup_cloned
+		let keys: Vec<String> = signer_lookup_cloned
 			.get_all()
 			.iter()
 			.map(|(signer, pub_key)| {
-				json!({
-					"signer": signer.as_ref().to_vec(),
-					"key": pub_key.to_vec()
-				})
+				let sealed_signer =
+					SealedSigner { signer: signer.as_ref().to_vec(), key: pub_key.to_vec() };
+
+				serde_json::to_string(&sealed_signer).unwrap()
 			})
 			.collect();
 		Ok(json!(keys))
+	});
+
+	io.add_sync_method("bitacross_setSealedSigners", move |params: Params| {
+		debug!("worker_api_direct rpc was called: bitacross_setSealedSigners");
+
+		let mut signers_to_write: Vec<(Address32, PubKey)> = vec![];
+
+		match params {
+			Params::Array(params) => {
+				params.iter().for_each(|param| match param {
+					Value::String(s) => {
+						let deserialized: SealedSigner = serde_json::from_str(s).unwrap();
+						std::println!("Deserialized param: {:?}", deserialized);
+
+						signers_to_write.push((
+							Address32::try_from(deserialized.signer.as_slice()).unwrap(),
+							deserialized.key.try_into().unwrap(),
+						))
+					},
+					_ => {
+						std::println!("Unknown value type")
+					},
+				});
+			},
+			_ => {
+				std::println!("Unknown param type")
+			},
+		}
+
+		std::println!("Writing state...");
+		another_signer_lookup_cloned.write_state(signers_to_write).unwrap();
+		Ok(json!({}))
 	});
 
 	io.add_sync_method("state_getScheduledEnclave", move |_: Params| {

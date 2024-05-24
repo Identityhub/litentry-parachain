@@ -28,7 +28,7 @@ use crate::{
 	},
 	Hash,
 };
-use bc_signer_registry::{PubKey, SignerRegistryLookup};
+use bc_signer_registry::{PubKey, RegistryResult, SignerRegistryLookup, SignerRegistryUpdater};
 use codec::{Decode, Encode};
 use ita_stf::{Getter, PublicGetter};
 use itc_direct_rpc_server::{
@@ -58,6 +58,24 @@ impl SignerRegistryLookup for SignerRegistryMock {
 	}
 	fn get_all(&self) -> Vec<(Address32, PubKey)> {
 		vec![]
+	}
+}
+
+impl SignerRegistryUpdater for SignerRegistryMock {
+	fn init(&self) -> RegistryResult<()> {
+		Ok(())
+	}
+
+	fn update(&self, account: Address32, key: PubKey) -> RegistryResult<()> {
+		Ok(())
+	}
+
+	fn remove(&self, _account: Address32) -> RegistryResult<()> {
+		Ok(())
+	}
+
+	fn write_state(&self, new_state: Vec<(Address32, PubKey)>) -> RegistryResult<()> {
+		Ok(())
 	}
 }
 
