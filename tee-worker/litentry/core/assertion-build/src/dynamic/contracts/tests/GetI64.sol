@@ -41,7 +41,7 @@ contract GetI64 is DynamicAssertion {
 
     function callGetI64(string memory url, string memory jsonPointer)
         public
-        returns (int64)
+        returns (bool, int64)
     {
         HttpHeader[] memory headers = new HttpHeader[](0);
         return GetI64(url, jsonPointer, headers);

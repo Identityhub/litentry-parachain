@@ -56,9 +56,9 @@ abstract contract DynamicAssertion {
         string memory url,
         string memory jsonPointer,
         HttpHeader[] memory headers
-    ) internal returns (int64) {
+    ) internal returns (bool, int64) {
         int64 value;
-
+        bool success;
         bytes memory encoded_params = abi.encode(url, jsonPointer, headers);
         uint256 encoded_params_len = encoded_params.length;
         assembly {
@@ -74,12 +74,17 @@ abstract contract DynamicAssertion {
                     0x20
                 )
             ) {
-                revert(0, 0)
+                success := false
+                value := 0
             }
-            value := mload(memPtr)
+            {
+                success := true
+                value := mload(memPtr)
+            }
+
         }
 
-        return (value);
+        return (success, value);
     }
 
     function GetBool(

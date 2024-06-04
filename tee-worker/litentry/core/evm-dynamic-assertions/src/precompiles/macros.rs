@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use evm::{executor::stack::PrecompileFailure, ExitError};
+use evm::{executor::stack::PrecompileFailure, ExitError, ExitRevert};
 use std::{borrow::Cow, string::String};
 
 pub fn prepare_custom_failure(reason: String) -> PrecompileFailure {
-	PrecompileFailure::Error { exit_status: ExitError::Other(Cow::Owned(reason)) }
+	PrecompileFailure::Revert { exit_status: ExitRevert::Reverted, output: Vec::with_capacity(0) }
 }
 
 #[macro_export]
