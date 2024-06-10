@@ -71,12 +71,9 @@ abstract contract BRC20 is TokenHoldingAmount {
         return 0;
     }
 
-    function isSupportedNetwork(uint32 network)
-        internal
-        pure
-        override
-        returns (bool)
-    {
+    function isSupportedNetwork(
+        uint32 network
+    ) internal pure override returns (bool) {
         return network == Web3Networks.BitcoinP2tr;
     }
 }

@@ -24,7 +24,10 @@ import "../libraries/Identities.sol";
 import "../DynamicAssertion.sol";
 
 abstract contract TokenHoldingAmount is DynamicAssertion {
-    function execute(Identity[] memory identities, string[] memory secrets)
+    function execute(
+        Identity[] memory identities,
+        string[] memory secrets
+    )
         public
         override
         returns (
@@ -72,22 +75,16 @@ abstract contract TokenHoldingAmount is DynamicAssertion {
         return total_balance;
     }
 
-    function calculateRange(uint256 balance)
-        private
-        pure
-        returns (
-            uint256,
-            uint256,
-            int256
-        )
-    {
+    function calculateRange(
+        uint256 balance
+    ) private pure returns (uint256, uint256, int256) {
         uint256[] memory ranges = getTokenRanges();
         uint256 index = ranges.length - 1;
         uint256 min = 0;
         int256 max = 0;
 
         for (uint32 i = 1; i < ranges.length; i++) {
-            if (balance < ranges[i] * 10**getTokenDecimals()) {
+            if (balance < ranges[i] * 10 ** getTokenDecimals()) {
                 index = i - 1;
                 break;
             }
@@ -104,11 +101,10 @@ abstract contract TokenHoldingAmount is DynamicAssertion {
         return (index, min, max);
     }
 
-    function assembleAssertions(uint256 min, int256 max)
-        private
-        pure
-        returns (string[] memory)
-    {
+    function assembleAssertions(
+        uint256 min,
+        int256 max
+    ) private pure returns (string[] memory) {
         string memory variable = "$holding_amount";
         AssertionLogic.CompositeCondition memory cc = AssertionLogic
             .CompositeCondition(
@@ -151,11 +147,9 @@ abstract contract TokenHoldingAmount is DynamicAssertion {
 
     function getTokenDecimals() internal pure virtual returns (uint8);
 
-    function isSupportedNetwork(uint32 network)
-        internal
-        pure
-        virtual
-        returns (bool);
+    function isSupportedNetwork(
+        uint32 network
+    ) internal pure virtual returns (bool);
 
     function queryBalance(
         Identity memory identity,

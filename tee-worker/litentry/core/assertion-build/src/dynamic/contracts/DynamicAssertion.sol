@@ -23,7 +23,10 @@ import "./libraries/Identities.sol";
 abstract contract DynamicAssertion {
     string schema_url;
 
-    function execute(Identity[] memory identities, string[] memory secrets)
+    function execute(
+        Identity[] memory identities,
+        string[] memory secrets
+    )
         public
         virtual
         returns (
