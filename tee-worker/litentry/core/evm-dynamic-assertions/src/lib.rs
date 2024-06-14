@@ -92,7 +92,11 @@ pub fn execute_smart_contract(byte_code: Vec<u8>, input_data: Vec<u8>) -> (ExitR
 		executor.transact_create(caller, U256::zero(), byte_code, u64::MAX, Vec::new());
 
 	// call assertion smart contract
-	executor.transact_call(caller, address, U256::zero(), input_data, u64::MAX, Vec::new())
+	let result = executor.transact_call(caller, address, U256::zero(), input_data, u64::MAX, Vec::new());
+
+	std::println!("Used gas: {:?}", executor.used_gas());
+
+	return result;
 }
 
 impl<A: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem>>
