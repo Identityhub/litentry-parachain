@@ -1,0 +1,17 @@
+{
+    "name": "tee-contracts",
+    "license": "ISC",
+    "scripts": {
+        "cp-contracts": "cp -r ../../litentry/core/assertion-build/src/dynamic/contracts ./contracts",
+        "compile": "npx hardhat compile",
+        "clean": "rm -rf artifacts/ cache/ contracts/"
+    },
+    "devDependencies": {
+        "hardhat": "^2.22.5",
+        "solc": "^0.8.26",
+        "@openzeppelin/contracts": "^4.9.0",
+        "parachain-api": "../../client-api/parachain-api",
+        "prettier": "2.8.1",
+        "sidechain-api": "../../client-api/sidechain-api"
+    }
+}
