@@ -78,7 +78,7 @@ abstract contract TokenHoldingAmount is DynamicAssertion {
 
 	function calculateRange(
 		uint256 balance
-	) private pure returns (uint256, uint256, int256) {
+	) public pure returns (uint256, uint256, int256) {
 		uint256[] memory ranges = getTokenRanges();
 		uint256 index = ranges.length - 1;
 		uint256 min = 0;
@@ -107,7 +107,7 @@ abstract contract TokenHoldingAmount is DynamicAssertion {
 	function assembleAssertions(
 		uint256 min,
 		int256 max
-	) private pure returns (string[] memory) {
+	) public pure returns (string[] memory) {
 		string memory variable = "$holding_amount";
 		AssertionLogic.CompositeCondition memory cc = AssertionLogic
 			.CompositeCondition(
