@@ -28,6 +28,7 @@ use mio::{event::Event, net::TcpStream, Poll, Ready, Token};
 use rustls::{ServerSession, Session};
 use std::{
 	format,
+	io::ErrorKind,
 	string::{String, ToString},
 	sync::Arc,
 	time::Instant,
@@ -149,6 +150,15 @@ where
 				Err(e) => match e {
 					tungstenite::Error::ConnectionClosed => return Ok(true),
 					tungstenite::Error::AlreadyClosed => return Ok(true),
+					tungstenite::Error::Io(e) =>
+						if e.kind() == ErrorKind::BrokenPipe {
+							return Ok(true)
+						} else {
+							error!(
+								"Failed to read message from web-socket (connection {}): {:?}",
+								self.connection_token.0, e
+							)
+						},
 					_ => error!(
 						"Failed to read message from web-socket (connection {}): {:?}",
 						self.connection_token.0, e
