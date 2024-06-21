@@ -53,7 +53,7 @@ use std::{
 	boxed::Box,
 	format,
 	string::{String, ToString},
-	sync::Arc,
+	sync::{mpsc::SyncSender, Arc},
 	vec::Vec,
 };
 use threadpool::ThreadPool;
@@ -73,6 +73,7 @@ use lc_direct_call::handler::{
 	kill_ceremony, nonce_share, partial_signature_share, sign_bitcoin, sign_ethereum,
 };
 use litentry_primitives::DecryptableRequest;
+use bc_musig2_ceremony::CeremonyEvent;
 
 #[derive(Debug, thiserror::Error, Clone)]
 pub enum Error {
@@ -111,6 +112,7 @@ pub struct BitAcrossTaskContext<
 	pub signer_registry_lookup: Arc<SRL>,
 	pub musig2_ceremony_pending_commands: Arc<Mutex<CeremonyCommandsRegistry>>,
 	pub signing_key_pub: [u8; 32],
+	pub ceremony_events_sender: SyncSender<CeremonyEvent>
 }
 
 impl<
@@ -145,6 +147,7 @@ where
 		signer_registry_lookup: Arc<SRL>,
 		musig2_ceremony_pending_commands: Arc<Mutex<CeremonyCommandsRegistry>>,
 		signing_key_pub: [u8; 32],
+		ceremony_events_sender: SyncSender<CeremonyEvent>
 	) -> Self {
 		Self {
 			shielding_key,
@@ -159,6 +162,7 @@ where
 			signer_registry_lookup,
 			musig2_ceremony_pending_commands,
 			signing_key_pub,
+			ceremony_events_sender
 		}
 	}
 }
@@ -242,6 +246,7 @@ where
 				context.signer_registry_lookup.clone(),
 				&context.signing_key_pub,
 				context.bitcoin_key_repository.clone(),
+				context.ceremony_events_sender.clone(),
 			)
 			.map_err(|e| {
 				error!("SignBitcoin error: {:?}", e);
@@ -267,6 +272,7 @@ where
 			context.musig2_ceremony_registry.clone(),
 			context.musig2_ceremony_pending_commands.clone(),
 			context.enclave_registry_lookup.clone(),
+			context.ceremony_events_sender.clone(),
 		)
 		.map_err(|e| {
 			error!("NonceShare error: {:?}", e);
@@ -282,6 +288,7 @@ where
 				signature,
 				context.musig2_ceremony_registry.clone(),
 				context.enclave_registry_lookup.clone(),
+				context.ceremony_events_sender.clone(),
 			)
 			.map_err(|e| {
 				error!("PartialSignatureShare error: {:?}", e);

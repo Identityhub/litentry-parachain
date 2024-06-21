@@ -37,7 +37,7 @@ use itp_utils::hex::ToHexPrefixed;
 use log::{debug, error, info, trace, warn};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::{blake2_256, ed25519, Pair as SpCorePair, H256};
-use std::vec::Vec;
+use std::{sync::mpsc::Receiver, vec::Vec};
 
 #[cfg(feature = "std")]
 use std::sync::Mutex;
@@ -71,6 +71,7 @@ pub fn init_ceremonies_thread<ClientFactory, AK, ER, OCallApi, SIGNINGAK, SHIELD
 	enclave_registry: Arc<ER>,
 	ceremony_registry: Arc<Mutex<CeremonyRegistry<AK>>>,
 	ceremony_commands: Arc<Mutex<CeremonyCommandsRegistry>>,
+	ceremony_events: Receiver<CeremonyEvent>,
 	ocall_api: Arc<OCallApi>,
 	responder: Arc<Responder>,
 ) where
@@ -86,243 +87,456 @@ pub fn init_ceremonies_thread<ClientFactory, AK, ER, OCallApi, SIGNINGAK, SHIELD
 	std::thread::spawn(move || {
 		let my_identity: Address32 = signing_key_access.retrieve_key().unwrap().public().0.into();
 		let identity = Identity::Substrate(my_identity);
-		loop {
-			{
-				let mut ceremonies_to_remove = vec![];
 
-				// do not hold lock for too long
-				let ceremonies_to_process: Vec<CeremonyId> =
-					ceremony_registry.lock().unwrap().keys().cloned().collect();
 
-				for ceremony_id_to_process in ceremonies_to_process {
-					// do not hold lock for too long as logic below includes I/O
-					let events = if let Some(ceremony) =
-						ceremony_registry.lock().unwrap().get_mut(&ceremony_id_to_process)
-					{
-						ceremony.tick()
-					} else {
-						warn!("Could not find ceremony with id: {:?}", ceremony_id_to_process);
-						continue
-					};
-
-					trace!("Got ceremony {:?} events {:?}", ceremony_id_to_process, events);
-					// should be retrieved once, but cannot be at startup because it's not yet initialized so it panics ...
+		while let Ok(event) = ceremony_events.recv() {
+					let mut ceremony_to_remove: Option<CeremonyId> = None;
 					let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap().m;
-					for event in events {
-						debug!(
-							"Processing ceremony event: {:?} for ceremony: {:?}",
-							event, ceremony_id_to_process
-						);
-						match event {
-							CeremonyEvent::FirstRoundStarted(signers, message, nonce) => {
-								signers.iter().for_each(|signer_id| {
-									let aes_key = random_aes_key();
-									let direct_call = DirectCall::NonceShare(
-										identity.clone(),
-										aes_key,
-										message.clone(),
-										nonce.serialize(),
-									);
 
-									debug!(
-										"Sharing nonce with signer: {:?} for ceremony: {:?}",
-										signer_id, ceremony_id_to_process
-									);
-
-									let request = prepare_request(
-										aes_key,
-										shielding_key_access.as_ref(),
-										signing_key_access.as_ref(),
-										mr_enclave,
-										direct_call,
-									);
-									send_to_all_signers(
-										&client_factory,
-										&enclave_registry,
-										&responses_sender,
-										signer_id,
-										&request,
-									);
-								});
-							},
-							CeremonyEvent::SecondRoundStarted(signers, message, signature) => {
-								signers.iter().for_each(|signer_id| {
-									let aes_key = random_aes_key();
-									let direct_call = DirectCall::PartialSignatureShare(
-										identity.clone(),
-										aes_key,
-										message.clone(),
-										signature.serialize(),
-									);
-
-									debug!(
-										"Sharing partial signature with signer: {:?} for ceremony: {:?}",
-										signer_id,
-										ceremony_id_to_process
-									);
-
-									let request = prepare_request(
-										aes_key,
-										shielding_key_access.as_ref(),
-										signing_key_access.as_ref(),
-										mr_enclave,
-										direct_call,
-									);
-									send_to_all_signers(
-										&client_factory,
-										&enclave_registry,
-										&responses_sender,
-										signer_id,
-										&request,
-									);
-								});
-							},
-							CeremonyEvent::CeremonyEnded(signature, request_aes_key) => {
-								debug!(
-									"Ceremony {:?} ended, signature {:?}",
-									ceremony_id_to_process, signature
-								);
-								let hash = blake2_256(&ceremony_id_to_process.encode());
-								let result = signature;
-								let encrypted_result =
-									aes_encrypt_default(&request_aes_key, &result.encode())
-										.encode();
-								if let Err(e) = responder.send_state_with_status(
-									Hash::from_slice(&hash),
-									encrypted_result,
-									DirectRequestStatus::Ok,
-								) {
-									error!(
-										"Could not send response to {:?}, reason: {:?}",
-										&hash, e
-									);
+								match event {
+									CeremonyEvent::FirstRoundStarted(signers, message, nonce) => {
+										signers.iter().for_each(|signer_id| {
+											let aes_key = random_aes_key();
+											let direct_call = DirectCall::NonceShare(
+												identity.clone(),
+												aes_key,
+												message.clone(),
+												nonce.serialize(),
+											);
+		
+											debug!(
+												"Sharing nonce with signer: {:?} for ceremony: {:?}",
+												signer_id, message
+											);
+		
+											let request = prepare_request(
+												aes_key,
+												shielding_key_access.as_ref(),
+												signing_key_access.as_ref(),
+												mr_enclave,
+												direct_call,
+											);
+											send_to_all_signers(
+												&client_factory,
+												&enclave_registry,
+												&responses_sender,
+												signer_id,
+												&request,
+											);
+										});
+									},
+									CeremonyEvent::SecondRoundStarted(signers, message, signature) => {
+										signers.iter().for_each(|signer_id| {
+											let aes_key = random_aes_key();
+											let direct_call = DirectCall::PartialSignatureShare(
+												identity.clone(),
+												aes_key,
+												message.clone(),
+												signature.serialize(),
+											);
+		
+											debug!(
+												"Sharing partial signature with signer: {:?} for ceremony: {:?}",
+												signer_id,
+												message
+											);
+		
+											let request = prepare_request(
+												aes_key,
+												shielding_key_access.as_ref(),
+												signing_key_access.as_ref(),
+												mr_enclave,
+												direct_call,
+											);
+											send_to_all_signers(
+												&client_factory,
+												&enclave_registry,
+												&responses_sender,
+												signer_id,
+												&request,
+											);
+										});
+									},
+									CeremonyEvent::CeremonyEnded(signature, ceremony_id, request_aes_key) => {
+										debug!(
+											"Ceremony {:?} ended, signature {:?}",
+											ceremony_id, signature
+										);
+										let hash = blake2_256(&ceremony_id.encode());
+										let result = signature;
+										let encrypted_result =
+											aes_encrypt_default(&request_aes_key, &result.encode())
+												.encode();
+										if let Err(e) = responder.send_state_with_status(
+											Hash::from_slice(&hash),
+											encrypted_result,
+											DirectRequestStatus::Ok,
+										) {
+											error!(
+												"Could not send response to {:?}, reason: {:?}",
+												&hash, e
+											);
+										}
+										ceremony_to_remove = Some(ceremony_id);
+										// ceremonies_to_remove.push(ceremony_id_to_process.clone());
+									},
+									CeremonyEvent::CeremonyError(signers, ceremony_id, error, request_aes_key) => {
+										debug!("Ceremony {:?} error {:?}", ceremony_id, error);
+										let hash = blake2_256(&ceremony_id.encode());
+										let result = SignBitcoinError::CeremonyError;
+										let encrypted_result =
+											aes_encrypt_default(&request_aes_key, &result.encode())
+												.encode();
+										if let Err(e) = responder.send_state_with_status(
+											Hash::from_slice(&hash),
+											encrypted_result,
+											DirectRequestStatus::Error,
+										) {
+											error!(
+												"Could not send response to {:?}, reason: {:?}",
+												&hash, e
+											);
+										}
+										ceremony_to_remove = Some(ceremony_id.clone());
+										// ceremonies_to_remove.push(ceremony_id_to_process.clone());
+		
+										//kill ceremonies on other workers
+										signers.iter().for_each(|signer_id| {
+											let aes_key = random_aes_key();
+											let direct_call = DirectCall::KillCeremony(
+												identity.clone(),
+												aes_key,
+												ceremony_id.clone(),
+											);
+		
+											debug!(
+												"Requesting ceremony kill on signer: {:?} for ceremony: {:?}",
+												signer_id,
+												ceremony_id
+											);
+		
+											let request = prepare_request(
+												aes_key,
+												shielding_key_access.as_ref(),
+												signing_key_access.as_ref(),
+												mr_enclave,
+												direct_call,
+											);
+											send_to_all_signers(
+												&client_factory,
+												&enclave_registry,
+												&responses_sender,
+												signer_id,
+												&request,
+											);
+										});
+									},
+									CeremonyEvent::CeremonyTimedOut(signers, ceremony_id, request_aes_key) => {
+										debug!("Ceremony {:?} timed out", ceremony_id);
+										let hash = blake2_256(&ceremony_id.encode());
+										let result = SignBitcoinError::CeremonyError;
+										let encrypted_result =
+											aes_encrypt_default(&request_aes_key, &result.encode())
+												.encode();
+										if let Err(e) = responder.send_state_with_status(
+											Hash::from_slice(&hash),
+											encrypted_result,
+											DirectRequestStatus::Error,
+										) {
+											error!(
+												"Could not send response to {:?}, reason: {:?}",
+												&hash, e
+											);
+										}
+										ceremony_to_remove = Some(ceremony_id.clone());
+										// ceremonies_to_remove.push(ceremony_id_to_process.clone());
+		
+										//kill ceremonies on other workers
+										signers.iter().for_each(|signer_id| {
+											let aes_key = random_aes_key();
+											let direct_call = DirectCall::KillCeremony(
+												identity.clone(),
+												aes_key,
+												ceremony_id.clone(),
+											);
+		
+											debug!(
+												"Requesting ceremony kill on signer: {:?} for ceremony: {:?}",
+												signer_id,
+												ceremony_id
+											);
+		
+											let request = prepare_request(
+												aes_key,
+												shielding_key_access.as_ref(),
+												signing_key_access.as_ref(),
+												mr_enclave,
+												direct_call,
+											);
+											send_to_all_signers(
+												&client_factory,
+												&enclave_registry,
+												&responses_sender,
+												signer_id,
+												&request,
+											);
+										});
+									},
 								}
-								ceremonies_to_remove.push(ceremony_id_to_process.clone());
-							},
-							CeremonyEvent::CeremonyError(signers, error, request_aes_key) => {
-								debug!("Ceremony {:?} error {:?}", ceremony_id_to_process, error);
-								let hash = blake2_256(&ceremony_id_to_process.encode());
-								let result = SignBitcoinError::CeremonyError;
-								let encrypted_result =
-									aes_encrypt_default(&request_aes_key, &result.encode())
-										.encode();
-								if let Err(e) = responder.send_state_with_status(
-									Hash::from_slice(&hash),
-									encrypted_result,
-									DirectRequestStatus::Error,
-								) {
-									error!(
-										"Could not send response to {:?}, reason: {:?}",
-										&hash, e
-									);
-								}
-								ceremonies_to_remove.push(ceremony_id_to_process.clone());
+					if let Some(ceremony_id) = ceremony_to_remove.take() {
+						let mut ceremony_commands = ceremony_commands.lock().unwrap();
+						let mut ceremony_registry = ceremony_registry.lock().unwrap();
+						ceremony_commands.remove(&ceremony_id);
+						ceremony_registry.remove(&ceremony_id);
+					}		
 
-								//kill ceremonies on other workers
-								signers.iter().for_each(|signer_id| {
-									let aes_key = random_aes_key();
-									let direct_call = DirectCall::KillCeremony(
-										identity.clone(),
-										aes_key,
-										ceremony_id_to_process.clone(),
-									);
 
-									debug!(
-										"Requesting ceremony kill on signer: {:?} for ceremony: {:?}",
-										signer_id,
-										ceremony_id_to_process
-									);
 
-									let request = prepare_request(
-										aes_key,
-										shielding_key_access.as_ref(),
-										signing_key_access.as_ref(),
-										mr_enclave,
-										direct_call,
-									);
-									send_to_all_signers(
-										&client_factory,
-										&enclave_registry,
-										&responses_sender,
-										signer_id,
-										&request,
-									);
-								});
-							},
-							CeremonyEvent::CeremonyTimedOut(signers, request_aes_key) => {
-								debug!("Ceremony {:?} timed out", ceremony_id_to_process);
-								let hash = blake2_256(&ceremony_id_to_process.encode());
-								let result = SignBitcoinError::CeremonyError;
-								let encrypted_result =
-									aes_encrypt_default(&request_aes_key, &result.encode())
-										.encode();
-								if let Err(e) = responder.send_state_with_status(
-									Hash::from_slice(&hash),
-									encrypted_result,
-									DirectRequestStatus::Error,
-								) {
-									error!(
-										"Could not send response to {:?}, reason: {:?}",
-										&hash, e
-									);
-								}
-								ceremonies_to_remove.push(ceremony_id_to_process.clone());
-
-								//kill ceremonies on other workers
-								signers.iter().for_each(|signer_id| {
-									let aes_key = random_aes_key();
-									let direct_call = DirectCall::KillCeremony(
-										identity.clone(),
-										aes_key,
-										ceremony_id_to_process.clone(),
-									);
-
-									debug!(
-										"Requesting ceremony kill on signer: {:?} for ceremony: {:?}",
-										signer_id,
-										ceremony_id_to_process
-									);
-
-									let request = prepare_request(
-										aes_key,
-										shielding_key_access.as_ref(),
-										signing_key_access.as_ref(),
-										mr_enclave,
-										direct_call,
-									);
-									send_to_all_signers(
-										&client_factory,
-										&enclave_registry,
-										&responses_sender,
-										signer_id,
-										&request,
-									);
-								});
-							},
-						}
-					}
-				}
-
-				let mut ceremony_commands = ceremony_commands.lock().unwrap();
-				let mut ceremony_registry = ceremony_registry.lock().unwrap();
-				ceremony_commands.retain(|_, ceremony_pending_commands| {
-					ceremony_pending_commands.retain_mut(|c| {
-						c.tick();
-						c.ticks_left > 0
-					});
-					!ceremony_pending_commands.is_empty()
-				});
-
-				ceremonies_to_remove.iter().for_each(|ceremony_id| {
-					debug!("Removing ceremony {:?}", ceremony_id);
-					let _ = ceremony_registry.remove_entry(ceremony_id);
-					let _ = ceremony_commands.remove_entry(ceremony_id);
-				});
-			}
-
-			std::thread::sleep(Duration::from_millis(1))
 		}
+
+		
+
 	});
+
+
+
+		// loop {
+		// 	{
+		// 		let mut ceremonies_to_remove = vec![];
+
+		// 		// do not hold lock for too long
+		// 		let ceremonies_to_process: Vec<CeremonyId> =
+		// 			ceremony_registry.lock().unwrap().keys().cloned().collect();
+
+		// 		for ceremony_id_to_process in ceremonies_to_process {
+		// 			// do not hold lock for too long as logic below includes I/O
+		// 			let events = if let Some(ceremony) =
+		// 				ceremony_registry.lock().unwrap().get_mut(&ceremony_id_to_process)
+		// 			{
+		// 				ceremony.tick()
+		// 			} else {
+		// 				warn!("Could not find ceremony with id: {:?}", ceremony_id_to_process);
+		// 				continue
+		// 			};
+
+		// 			trace!("Got ceremony {:?} events {:?}", ceremony_id_to_process, events);
+		// 			// should be retrieved once, but cannot be at startup because it's not yet initialized so it panics ...
+		// 			let mr_enclave = ocall_api.get_mrenclave_of_self().unwrap().m;
+		// 			for event in events {
+		// 				debug!(
+		// 					"Processing ceremony event: {:?} for ceremony: {:?}",
+		// 					event, ceremony_id_to_process
+		// 				);
+		// 				match event {
+		// 					CeremonyEvent::FirstRoundStarted(signers, message, nonce) => {
+		// 						signers.iter().for_each(|signer_id| {
+		// 							let aes_key = random_aes_key();
+		// 							let direct_call = DirectCall::NonceShare(
+		// 								identity.clone(),
+		// 								aes_key,
+		// 								message.clone(),
+		// 								nonce.serialize(),
+		// 							);
+
+		// 							debug!(
+		// 								"Sharing nonce with signer: {:?} for ceremony: {:?}",
+		// 								signer_id, ceremony_id_to_process
+		// 							);
+
+		// 							let request = prepare_request(
+		// 								aes_key,
+		// 								shielding_key_access.as_ref(),
+		// 								signing_key_access.as_ref(),
+		// 								mr_enclave,
+		// 								direct_call,
+		// 							);
+		// 							send_to_all_signers(
+		// 								&client_factory,
+		// 								&enclave_registry,
+		// 								&responses_sender,
+		// 								signer_id,
+		// 								&request,
+		// 							);
+		// 						});
+		// 					},
+		// 					CeremonyEvent::SecondRoundStarted(signers, message, signature) => {
+		// 						signers.iter().for_each(|signer_id| {
+		// 							let aes_key = random_aes_key();
+		// 							let direct_call = DirectCall::PartialSignatureShare(
+		// 								identity.clone(),
+		// 								aes_key,
+		// 								message.clone(),
+		// 								signature.serialize(),
+		// 							);
+
+		// 							debug!(
+		// 								"Sharing partial signature with signer: {:?} for ceremony: {:?}",
+		// 								signer_id,
+		// 								ceremony_id_to_process
+		// 							);
+
+		// 							let request = prepare_request(
+		// 								aes_key,
+		// 								shielding_key_access.as_ref(),
+		// 								signing_key_access.as_ref(),
+		// 								mr_enclave,
+		// 								direct_call,
+		// 							);
+		// 							send_to_all_signers(
+		// 								&client_factory,
+		// 								&enclave_registry,
+		// 								&responses_sender,
+		// 								signer_id,
+		// 								&request,
+		// 							);
+		// 						});
+		// 					},
+		// 					CeremonyEvent::CeremonyEnded(signature, request_aes_key) => {
+		// 						debug!(
+		// 							"Ceremony {:?} ended, signature {:?}",
+		// 							ceremony_id_to_process, signature
+		// 						);
+		// 						let hash = blake2_256(&ceremony_id_to_process.encode());
+		// 						let result = signature;
+		// 						let encrypted_result =
+		// 							aes_encrypt_default(&request_aes_key, &result.encode())
+		// 								.encode();
+		// 						if let Err(e) = responder.send_state_with_status(
+		// 							Hash::from_slice(&hash),
+		// 							encrypted_result,
+		// 							DirectRequestStatus::Ok,
+		// 						) {
+		// 							error!(
+		// 								"Could not send response to {:?}, reason: {:?}",
+		// 								&hash, e
+		// 							);
+		// 						}
+		// 						ceremonies_to_remove.push(ceremony_id_to_process.clone());
+		// 					},
+		// 					CeremonyEvent::CeremonyError(signers, error, request_aes_key) => {
+		// 						debug!("Ceremony {:?} error {:?}", ceremony_id_to_process, error);
+		// 						let hash = blake2_256(&ceremony_id_to_process.encode());
+		// 						let result = SignBitcoinError::CeremonyError;
+		// 						let encrypted_result =
+		// 							aes_encrypt_default(&request_aes_key, &result.encode())
+		// 								.encode();
+		// 						if let Err(e) = responder.send_state_with_status(
+		// 							Hash::from_slice(&hash),
+		// 							encrypted_result,
+		// 							DirectRequestStatus::Error,
+		// 						) {
+		// 							error!(
+		// 								"Could not send response to {:?}, reason: {:?}",
+		// 								&hash, e
+		// 							);
+		// 						}
+		// 						ceremonies_to_remove.push(ceremony_id_to_process.clone());
+
+		// 						//kill ceremonies on other workers
+		// 						signers.iter().for_each(|signer_id| {
+		// 							let aes_key = random_aes_key();
+		// 							let direct_call = DirectCall::KillCeremony(
+		// 								identity.clone(),
+		// 								aes_key,
+		// 								ceremony_id_to_process.clone(),
+		// 							);
+
+		// 							debug!(
+		// 								"Requesting ceremony kill on signer: {:?} for ceremony: {:?}",
+		// 								signer_id,
+		// 								ceremony_id_to_process
+		// 							);
+
+		// 							let request = prepare_request(
+		// 								aes_key,
+		// 								shielding_key_access.as_ref(),
+		// 								signing_key_access.as_ref(),
+		// 								mr_enclave,
+		// 								direct_call,
+		// 							);
+		// 							send_to_all_signers(
+		// 								&client_factory,
+		// 								&enclave_registry,
+		// 								&responses_sender,
+		// 								signer_id,
+		// 								&request,
+		// 							);
+		// 						});
+		// 					},
+		// 					CeremonyEvent::CeremonyTimedOut(signers, request_aes_key) => {
+		// 						debug!("Ceremony {:?} timed out", ceremony_id_to_process);
+		// 						let hash = blake2_256(&ceremony_id_to_process.encode());
+		// 						let result = SignBitcoinError::CeremonyError;
+		// 						let encrypted_result =
+		// 							aes_encrypt_default(&request_aes_key, &result.encode())
+		// 								.encode();
+		// 						if let Err(e) = responder.send_state_with_status(
+		// 							Hash::from_slice(&hash),
+		// 							encrypted_result,
+		// 							DirectRequestStatus::Error,
+		// 						) {
+		// 							error!(
+		// 								"Could not send response to {:?}, reason: {:?}",
+		// 								&hash, e
+		// 							);
+		// 						}
+		// 						ceremonies_to_remove.push(ceremony_id_to_process.clone());
+
+		// 						//kill ceremonies on other workers
+		// 						signers.iter().for_each(|signer_id| {
+		// 							let aes_key = random_aes_key();
+		// 							let direct_call = DirectCall::KillCeremony(
+		// 								identity.clone(),
+		// 								aes_key,
+		// 								ceremony_id_to_process.clone(),
+		// 							);
+
+		// 							debug!(
+		// 								"Requesting ceremony kill on signer: {:?} for ceremony: {:?}",
+		// 								signer_id,
+		// 								ceremony_id_to_process
+		// 							);
+
+		// 							let request = prepare_request(
+		// 								aes_key,
+		// 								shielding_key_access.as_ref(),
+		// 								signing_key_access.as_ref(),
+		// 								mr_enclave,
+		// 								direct_call,
+		// 							);
+		// 							send_to_all_signers(
+		// 								&client_factory,
+		// 								&enclave_registry,
+		// 								&responses_sender,
+		// 								signer_id,
+		// 								&request,
+		// 							);
+		// 						});
+		// 					},
+		// 				}
+		// 			}
+		// 		}
+
+		// 		let mut ceremony_commands = ceremony_commands.lock().unwrap();
+		// 		let mut ceremony_registry = ceremony_registry.lock().unwrap();
+		// 		ceremony_commands.retain(|_, ceremony_pending_commands| {
+		// 			ceremony_pending_commands.retain_mut(|c| {
+		// 				c.tick();
+		// 				c.ticks_left > 0
+		// 			});
+		// 			!ceremony_pending_commands.is_empty()
+		// 		});
+
+		// 		ceremonies_to_remove.iter().for_each(|ceremony_id| {
+		// 			debug!("Removing ceremony {:?}", ceremony_id);
+		// 			let _ = ceremony_registry.remove_entry(ceremony_id);
+		// 			let _ = ceremony_commands.remove_entry(ceremony_id);
+		// 		});
+		// 	}
+
+		// 	std::thread::sleep(Duration::from_millis(1))
+		// }
+	// });
 
 	// here we will process all responses
 	std::thread::spawn(move || {

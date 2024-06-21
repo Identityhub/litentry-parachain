@@ -19,6 +19,8 @@ use codec::Encode;
 use log::debug;
 use parentchain_primitives::Identity;
 use std::{collections::HashMap, sync::Arc};
+use std::sync::mpsc::SyncSender;
+use bc_musig2_ceremony::CeremonyEvent;
 
 #[cfg(feature = "std")]
 use std::sync::Mutex;
@@ -44,6 +46,7 @@ pub fn handle<ER: EnclaveRegistryLookup, AK: AccessKey<KeyType = SchnorrPair>>(
 	signature: [u8; 32],
 	ceremony_registry: Arc<Mutex<HashMap<CeremonyId, MuSig2Ceremony<AK>>>>,
 	enclave_registry: Arc<ER>,
+	ceremony_events_sender: SyncSender<CeremonyEvent>,
 ) -> Result<(), PartialSignatureShareError> {
 	debug!("Received partial signature share from: {:?} for ceremony {:?}", signer, ceremony_id);
 	let is_valid_signer = match signer {
@@ -61,6 +64,10 @@ pub fn handle<ER: EnclaveRegistryLookup, AK: AccessKey<KeyType = SchnorrPair>>(
 					*address.as_ref(),
 					PartialSignature::from_slice(&signature).map_err(|_| InvalidSignature)?,
 				));
+				let events = ceremony.tick();
+				for event in events {
+					ceremony_events_sender.send(event);
+				}
 			},
 		_ => return Err(PartialSignatureShareError::InvalidSigner),
 	}

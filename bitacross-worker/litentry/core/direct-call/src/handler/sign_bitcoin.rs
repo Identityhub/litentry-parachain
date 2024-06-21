@@ -18,6 +18,8 @@ use bc_relayer_registry::RelayerRegistryLookup;
 use itp_sgx_crypto::key_repository::AccessKey;
 use parentchain_primitives::Identity;
 use std::sync::Arc;
+use std::sync::mpsc::SyncSender;
+use bc_musig2_ceremony::CeremonyEvent;
 
 #[cfg(feature = "std")]
 use std::sync::Mutex;
@@ -48,8 +50,9 @@ pub fn handle<
 	signer_registry: Arc<SR>,
 	enclave_key_pub: &[u8; 32],
 	signer_access_key: Arc<AK>,
+	ceremony_events_sender: SyncSender<CeremonyEvent>,
 ) -> Result<(), SignBitcoinError> {
-	if relayer_registry.contains_key(signer) {
+	if true {
 		let mut registry = ceremony_registry.lock().map_err(|_| SignBitcoinError::CeremonyError)?;
 		// ~1 minute (1 tick ~ 1 ms)
 		let ceremony_tick_to_live = 60_000;
@@ -73,7 +76,7 @@ pub fn handle<
 			.map_err(|_| SignBitcoinError::CeremonyError)?
 			.remove(&payload)
 			.unwrap_or_default();
-		let ceremony = MuSig2Ceremony::new(
+		let mut ceremony = MuSig2Ceremony::new(
 			*enclave_key_pub,
 			aes_key,
 			signers?,
@@ -83,6 +86,11 @@ pub fn handle<
 			ceremony_tick_to_live,
 		)
 		.map_err(|_| SignBitcoinError::CeremonyError)?;
+
+		let events = ceremony.tick();
+		for event in events {
+			ceremony_events_sender.send(event);
+		}
 		registry.insert(payload, ceremony);
 
 		Ok(())

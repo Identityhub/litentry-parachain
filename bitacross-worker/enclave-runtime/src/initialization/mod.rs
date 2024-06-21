@@ -19,6 +19,8 @@
 
 pub mod global_components;
 pub mod parentchain;
+use bc_musig2_ceremony::CeremonyEvent;
+use std::sync::mpsc::SyncSender;
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	get_node_metadata_repository_from_integritee_solo_or_parachain,
@@ -100,6 +102,7 @@ use litentry_macros::if_development_or;
 use log::*;
 use sp_core::crypto::Pair;
 use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
+use std::sync::mpsc::sync_channel;
 
 use std::sync::SgxMutex as Mutex;
 
@@ -240,6 +243,8 @@ pub(crate) fn init_enclave(
 	enclave_registry.init().map_err(|e| Error::Other(e.into()))?;
 	GLOBAL_ENCLAVE_REGISTRY.initialize(enclave_registry.clone());
 
+	let (sender, receiver) = sync_channel(1000);
+
 	let io_handler = public_api_rpc_handler(
 		top_pool_author,
 		getter_executor,
@@ -257,9 +262,10 @@ pub(crate) fn init_enclave(
 	let pending_ceremony_commands_cloned = pending_ceremony_commands.clone();
 
 	std::thread::spawn(move || {
-		run_bit_across_handler(ceremony_registry, pending_ceremony_commands, signer.public().0)
+		run_bit_across_handler(ceremony_registry, pending_ceremony_commands, signer.public().0, sender)
 			.unwrap()
 	});
+
 
 	let client_factory = DirectRpcClientFactory {};
 	init_ceremonies_thread(
@@ -269,6 +275,7 @@ pub(crate) fn init_enclave(
 		enclave_registry,
 		ceremony_registry_cloned,
 		pending_ceremony_commands_cloned,
+		receiver,
 		ocall_api,
 		rpc_responder,
 	);
@@ -378,6 +385,7 @@ fn run_bit_across_handler(
 	musig2_ceremony_registry: Arc<Mutex<CeremonyRegistry<KeyRepository<SchnorrPair, Seal>>>>,
 	musig2_ceremony_pending_commands: Arc<Mutex<CeremonyCommandsRegistry>>,
 	signing_key_pub: [u8; 32],
+	ceremony_events_sender: SyncSender<CeremonyEvent>
 ) -> Result<(), Error> {
 	let author_api = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
@@ -412,6 +420,7 @@ fn run_bit_across_handler(
 		signer_registry_lookup,
 		musig2_ceremony_pending_commands,
 		signing_key_pub,
+		ceremony_events_sender
 	);
 	run_bit_across_handler_runner(Arc::new(stf_task_context));
 	Ok(())

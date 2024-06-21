@@ -17,6 +17,8 @@
 use bc_enclave_registry::EnclaveRegistryLookup;
 use parentchain_primitives::Identity;
 use std::{sync::Arc, vec};
+use std::sync::mpsc::SyncSender;
+use bc_musig2_ceremony::CeremonyEvent;
 
 #[cfg(feature = "std")]
 use std::sync::Mutex;
@@ -45,6 +47,7 @@ pub fn handle<ER: EnclaveRegistryLookup, AK: AccessKey<KeyType = SchnorrPair>>(
 	ceremony_registry: Arc<Mutex<CeremonyRegistry<AK>>>,
 	ceremony_commands: Arc<Mutex<CeremonyCommandsRegistry>>,
 	enclave_registry: Arc<ER>,
+	ceremony_events_sender: SyncSender<CeremonyEvent>,
 ) -> Result<(), NonceShareError> {
 	debug!("Received nonce share from: {:?} for ceremony {:?}", signer, ceremony_id);
 	let is_valid_signer = match signer {
@@ -63,6 +66,10 @@ pub fn handle<ER: EnclaveRegistryLookup, AK: AccessKey<KeyType = SchnorrPair>>(
 			let mut registry = ceremony_registry.lock().unwrap();
 			if let Some(ceremony) = registry.get_mut(&ceremony_id) {
 				ceremony.save_event(CeremonyCommand::SaveNonce(*address.as_ref(), nonce));
+				let events = ceremony.tick();
+				for event in events {
+					ceremony_events_sender.send(event);
+				}
 			} else {
 				debug!("Ceremony {:?} not found, saving events...", ceremony_id);
 				let mut commands = ceremony_commands.lock().unwrap();
