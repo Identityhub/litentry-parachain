@@ -88,7 +88,10 @@ where
 		println!(
 			"    [Enclave] (MU-RA-Server) handle_shard_request_from_client, calling read_shard()"
 		);
-		let request = self.await_shard_request_from_client()?;
+		let request = self.await_shard_request_from_client().map_err(|e| {
+			error!("Failed to read shard from client: {:?}", e);
+			e
+		})?;
 		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, await_shard_request_from_client() OK");
 		println!("    [Enclave] (MU-RA-Server) handle_shard_request_from_client, write_all()");
 		self.write_provisioning_payloads(&request.shard)
