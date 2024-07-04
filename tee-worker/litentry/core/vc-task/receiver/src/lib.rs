@@ -507,10 +507,7 @@ where
 			//
 			ensure!(!is_already_linked, RequestVcErrorDetail::IdentityAlreadyLinked);
 			// we are safe to use `default_web3networks` and `Active` as IDGraph would be non-empty otherwise
-			id_graph.push((
-				who.clone(),
-				IdentityContext::new(BlockNumber::one(), who.default_web3networks()),
-			));
+			id_graph.push((who.clone(), IdentityContext::new(BlockNumber::one())));
 			should_create_id_graph = true;
 		}
 		info!("should_create_id_graph: {}", should_create_id_graph);

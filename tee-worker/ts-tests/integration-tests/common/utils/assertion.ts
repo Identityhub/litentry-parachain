@@ -66,11 +66,7 @@ export async function assertIdGraphMutationResult(
     teeShieldingKey: KeyObject,
     identity: CorePrimitivesIdentity,
     returnValue: WorkerRpcReturnValue,
-    resultType:
-        | 'LinkIdentityResult'
-        | 'DeactivateIdentityResult'
-        | 'ActivateIdentityResult'
-        | 'SetIdentityNetworksResult',
+    resultType: 'LinkIdentityResult' | 'DeactivateIdentityResult' | 'ActivateIdentityResult',
     expectedIdGraph: [CorePrimitivesIdentity, boolean][]
 ): Promise<HexString> {
     const decodedResult = context.api.createType(resultType, returnValue.value);

@@ -44,12 +44,8 @@ pub struct IdentityContext<T: Config> {
 }
 
 impl<T: Config> IdentityContext<T> {
-	pub fn new(link_block: BlockNumberOf<T>, web3networks: Vec<Web3Network>) -> Self {
-		Self { link_block, web3networks: Self::dedup(web3networks), status: IdentityStatus::Active }
-	}
-
-	pub fn set_web3networks(&mut self, web3networks: Vec<Web3Network>) {
-		self.web3networks = Self::dedup(web3networks);
+	pub fn new(link_block: BlockNumberOf<T>) -> Self {
+		Self { link_block, status: IdentityStatus::Active, web3networks: Vec::new() }
 	}
 
 	pub fn deactivate(&mut self) {
@@ -62,13 +58,6 @@ impl<T: Config> IdentityContext<T> {
 
 	pub fn is_active(&self) -> bool {
 		self.status == IdentityStatus::Active
-	}
-
-	// a small helper fn to apply mutable changes
-	fn dedup(mut web3networks: Vec<Web3Network>) -> Vec<Web3Network> {
-		web3networks.sort();
-		web3networks.dedup();
-		web3networks
 	}
 }
 

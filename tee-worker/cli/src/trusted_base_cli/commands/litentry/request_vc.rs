@@ -302,14 +302,13 @@ macro_rules! AchainableCommandArgs {
 		#[derive(Args, Debug)]
 		pub struct $type_name {
 			pub name: String,
-			#[clap(
-				short, long,
-				num_args = 1..,
-				required = true,
-				value_delimiter = ',',
+
+			$( pub $field_name: $field_type ,)*
+			#[clap(short, long,
+				num_args = 0..,
+				value_delimiter = ','
 			)]
 			pub chain: Vec<String>,
-			$( pub $field_name: $field_type ),*
 		}
 	};
 }

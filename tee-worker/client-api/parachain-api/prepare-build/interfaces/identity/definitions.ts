@@ -15,10 +15,6 @@ export default {
             mutated_id_graph: "AesOutput",
             id_graph_hash: "H256",
         },
-        SetIdentityNetworksResult: {
-            mutated_id_graph: "AesOutput",
-            id_graph_hash: "H256",
-        },
         LitentryIdentity: {
             _enum: {
                 Twitter: "IdentityString",
@@ -137,8 +133,8 @@ export default {
 
         IdentityContext: {
             link_block: "BlockNumber",
-            web3networks: "BoundedWeb3Network",
             status: "IdentityStatus",
+            web3networks: "BoundedWeb3Network",
         },
         BoundedWeb3Network: "BoundedVec<Web3Network, ConstU32<128>>",
     },

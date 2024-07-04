@@ -201,7 +201,6 @@ export async function createSignedTrustedCallLinkIdentity(
     primeIdentity: CorePrimitivesIdentity,
     identity: string,
     validationData: string,
-    web3networks: string,
     aesKey: string,
     hash: string,
     options?: { withWrappedBytes?: boolean; withPrefix?: boolean }
@@ -210,38 +209,14 @@ export async function createSignedTrustedCallLinkIdentity(
         parachainApi,
         [
             'link_identity',
-            '(LitentryIdentity, LitentryIdentity, LitentryIdentity, LitentryValidationData, Vec<Web3Network>, Option<RequestAesKey>, H256)',
+            '(LitentryIdentity, LitentryIdentity, LitentryIdentity, LitentryValidationData, Option<RequestAesKey>, H256)',
         ],
         signer,
         mrenclave,
         nonce,
-        [primeIdentity.toHuman(), primeIdentity.toHuman(), identity, validationData, web3networks, aesKey, hash],
+        [primeIdentity.toHuman(), primeIdentity.toHuman(), identity, validationData, aesKey, hash],
         options?.withWrappedBytes,
         options?.withPrefix
-    );
-}
-
-export async function createSignedTrustedCallSetIdentityNetworks(
-    parachainApi: ApiPromise,
-    mrenclave: string,
-    nonce: Codec,
-    signer: Signer,
-    primeIdentity: CorePrimitivesIdentity,
-    identity: string,
-    web3networks: string,
-    aesKey: string,
-    hash: string
-) {
-    return createSignedTrustedCall(
-        parachainApi,
-        [
-            'set_identity_networks',
-            '(LitentryIdentity, LitentryIdentity, LitentryIdentity, Vec<Web3Network>, Option<RequestAesKey>, H256)',
-        ],
-        signer,
-        mrenclave,
-        nonce,
-        [primeIdentity.toHuman(), primeIdentity.toHuman(), identity, web3networks, aesKey, hash]
     );
 }
 
