@@ -24,8 +24,8 @@ use itp_types::{
 	parentchain::{
 		events::{
 			ActivateIdentityRequested, AssertionCreated, DeactivateIdentityRequested,
-			LinkIdentityRequested, OpaqueTaskPosted, ScheduledEnclaveRemoved, ScheduledEnclaveSet,
-			VCRequested,
+			EnclaveUnauthorized, LinkIdentityRequested, OpaqueTaskPosted,
+			ParentchainBlockProcessed, VCRequested,
 		},
 		FilterEvents,
 	},
@@ -87,13 +87,7 @@ impl FilterEvents for FilterableEvents {
 		self.filter()
 	}
 
-	fn get_scheduled_enclave_set_events(&self) -> Result<Vec<ScheduledEnclaveSet>, Self::Error> {
-		self.filter()
-	}
-
-	fn get_scheduled_enclave_removed_events(
-		&self,
-	) -> Result<Vec<ScheduledEnclaveRemoved>, Self::Error> {
+	fn get_enclave_unauthorized_events(&self) -> Result<Vec<EnclaveUnauthorized>, Self::Error> {
 		self.filter()
 	}
 
@@ -102,6 +96,12 @@ impl FilterEvents for FilterableEvents {
 	}
 
 	fn get_assertion_created_events(&self) -> Result<Vec<AssertionCreated>, Self::Error> {
+		self.filter()
+	}
+
+	fn get_parentchain_block_proccessed_events(
+		&self,
+	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error> {
 		self.filter()
 	}
 }

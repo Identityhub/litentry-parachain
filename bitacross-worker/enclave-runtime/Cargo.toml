@@ -41,6 +41,7 @@ test = [
     "itp-test/sgx",
     "itp-top-pool-author/test",
     "itp-top-pool-author/mocks",
+    "bc-musig2-ceremony/sgx-test",
 ]
 dcap = []
 
@@ -66,6 +67,7 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
 lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
 primitive-types = { version = "0.12.1", default-features = false, features = ["codec", "serde_no_std"] }
+url = { git = "https://github.com/integritee-network/rust-url", branch = "sgx-no-std", default-features = false, features = ["alloc"] }
 
 
 # scs / integritee
@@ -133,7 +135,6 @@ bc-musig2-runner = { path = "../bitacross/core/bc-musig2-runner", default-featur
 bc-relayer-registry = { path = "../bitacross/core/bc-relayer-registry", default-features = false, features = ["sgx"] }
 bc-signer-registry = { path = "../bitacross/core/bc-signer-registry", default-features = false, features = ["sgx"] }
 bc-task-sender = { path = "../bitacross/core/bc-task-sender", default-features = false, features = ["sgx"] }
-lc-scheduled-enclave = { path = "../litentry/core/scheduled-enclave", default-features = false, features = ["sgx"] }
 litentry-hex-utils = { path = "../../primitives/hex", default-features = false }
 litentry-macros = { path = "../../primitives/core/macros", default-features = false }
 litentry-primitives = { path = "../litentry/primitives", default-features = false, features = ["sgx"] }

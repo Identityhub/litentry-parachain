@@ -19,7 +19,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
 	trusted_operation::{perform_trusted_operation, send_direct_vc_request},
-	Cli, CliResult, CliResultOk,
+	Cli, CliError, CliResult, CliResultOk,
 };
 use clap::Parser;
 use codec::Decode;
@@ -30,10 +30,10 @@ use litentry_primitives::{
 	aes_decrypt, AchainableAmount, AchainableAmountHolding, AchainableAmountToken,
 	AchainableAmounts, AchainableBasic, AchainableBetweenPercents, AchainableClassOfYear,
 	AchainableDate, AchainableDateInterval, AchainableDatePercent, AchainableParams,
-	AchainableToken, Assertion, BnbDigitDomainType, BoundedWeb3Network, ContestType, EVMTokenType,
-	GenericDiscordRoleType, Identity, OneBlockCourseType, ParameterString, PlatformUserType,
-	RequestAesKey, SoraQuizType, VIP3MembershipCardLevel, Web3Network, Web3NftType, Web3TokenType,
-	REQUEST_AES_KEY_LEN,
+	AchainableToken, Assertion, BnbDigitDomainType, BoundedWeb3Network, ContestType,
+	DynamicContractParams, DynamicParams, EVMTokenType, GenericDiscordRoleType, Identity,
+	OneBlockCourseType, ParameterString, PlatformUserType, RequestAesKey, SoraQuizType,
+	VIP3MembershipCardLevel, Web3Network, Web3NftType, Web3TokenType, REQUEST_AES_KEY_LEN,
 };
 use sp_core::{Pair, H160};
 
@@ -156,8 +156,12 @@ pub struct A2Arg {
 
 #[derive(Args, Debug)]
 pub struct DynamicArg {
-	//hex encoded smart contract id
+	// hex encoded smart contract id
 	pub smart_contract_id: String,
+	// hex encoded smart contract params
+	// can use this online tool to encode params: https://abi.hashex.org/
+	pub smart_contract_param: Option<String>,
+	pub return_log: Option<bool>,
 }
 
 #[derive(Args, Debug)]
@@ -273,6 +277,7 @@ pub enum TokenHoldingAmountCommand {
 	Sol,
 	Mcrt,
 	Btc,
+	Bean,
 }
 
 #[derive(Subcommand, Debug)]
@@ -358,6 +363,21 @@ AchainableCommandArgs!(TokenArg, {
 	token: String,
 });
 
+fn print_vc(key: &RequestAesKey, mut vc: RequestVCResult) {
+	let decrypted = aes_decrypt(key, &mut vc.vc_payload).unwrap();
+	let credential_str = String::from_utf8(decrypted).expect("Found invalid UTF-8");
+	println!("----Generated VC-----");
+	println!("{}", credential_str);
+	if let Some(mut vc_logs) = vc.vc_logs {
+		let decrypted_logs = aes_decrypt(key, &mut vc_logs).unwrap();
+		if !decrypted_logs.is_empty() {
+			let logs_str = String::from_utf8(decrypted_logs).expect("Found invalid UTF-8");
+			println!("----VC Logging-----");
+			println!("{}", logs_str);
+		}
+	}
+}
+
 impl RequestVcCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
 		let alice = get_pair_from_str(trusted_cli, "//Alice", cli);
@@ -376,7 +396,7 @@ impl RequestVcCommand {
 				s.extend(a.as_str().split(' '));
 				AssertionCommand::parse_from(s).command.to_assertion()
 			})
-			.collect();
+			.collect::<Result<Vec<_>, _>>()?;
 
 		println!(">>> assertions: {:?}", assertions);
 
@@ -394,12 +414,8 @@ impl RequestVcCommand {
 				.sign(&KeyPair::Sr25519(Box::new(alice.clone())), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_cli.direct);
 				match perform_trusted_operation::<RequestVCResult>(cli, trusted_cli, &top) {
-					Ok(mut vc) => {
-						let decrypted = aes_decrypt(&key, &mut vc.vc_payload).unwrap();
-						let credential_str =
-							String::from_utf8(decrypted).expect("Found invalid UTF-8");
-						println!("----Generated VC-----");
-						println!("{}", credential_str);
+					Ok(vc) => {
+						print_vc(&key, vc);
 					},
 					Err(e) => {
 						println!("{:?}", e);
@@ -421,16 +437,14 @@ impl RequestVcCommand {
 			match send_direct_vc_request(cli, trusted_cli, &top, key) {
 				Ok(result) =>
 					for res in result {
-						if res.is_error {
-							println!("received one error: {:?}", String::from_utf8(res.payload));
-						} else {
-							let mut vc =
-								RequestVCResult::decode(&mut res.payload.as_slice()).unwrap();
-							let decrypted = aes_decrypt(&key, &mut vc.vc_payload).unwrap();
-							let credential_str =
-								String::from_utf8(decrypted).expect("Found invalid UTF-8");
-							println!("----Generated VC-----");
-							println!("{}", credential_str);
+						match res.result {
+							Err(err) => {
+								println!("received one error: {:?}", err);
+							},
+							Ok(payload) => {
+								let vc = RequestVCResult::decode(&mut payload.as_slice()).unwrap();
+								print_vc(&key, vc);
+							},
 						}
 					},
 				Err(e) => {
@@ -450,28 +464,28 @@ impl RequestVcCommand {
 
 impl Command {
 	// helper fn to convert a `Command` to `Assertion`
-	pub fn to_assertion(&self) -> Assertion {
+	pub fn to_assertion(&self) -> Result<Assertion, CliError> {
 		use Assertion::*;
 		match self {
-			Command::A1 => A1,
-			Command::A2(arg) => A2(to_para_str(&arg.guild_id)),
-			Command::A3(arg) => A3(
+			Command::A1 => Ok(A1),
+			Command::A2(arg) => Ok(A2(to_para_str(&arg.guild_id))),
+			Command::A3(arg) => Ok(A3(
 				to_para_str(&arg.guild_id),
 				to_para_str(&arg.channel_id),
 				to_para_str(&arg.role_id),
-			),
-			Command::A4(arg) => A4(to_para_str(&arg.minimum_amount)),
-			Command::A6 => A6,
-			Command::A7(arg) => A7(to_para_str(&arg.minimum_amount)),
-			Command::A8(arg) => A8(to_chains(&arg.networks)),
-			Command::A10(arg) => A10(to_para_str(&arg.minimum_amount)),
-			Command::A11(arg) => A11(to_para_str(&arg.minimum_amount)),
+			)),
+			Command::A4(arg) => Ok(A4(to_para_str(&arg.minimum_amount))),
+			Command::A6 => Ok(A6),
+			Command::A7(arg) => Ok(A7(to_para_str(&arg.minimum_amount))),
+			Command::A8(arg) => Ok(A8(to_chains(&arg.networks))),
+			Command::A10(arg) => Ok(A10(to_para_str(&arg.minimum_amount))),
+			Command::A11(arg) => Ok(A11(to_para_str(&arg.minimum_amount))),
 			Command::A13(arg) => {
 				let raw: [u8; 32] = decode_hex(&arg.account).unwrap().try_into().unwrap();
-				A13(raw.into())
+				Ok(A13(raw.into()))
 			},
-			Command::A14 => A14,
-			Command::Achainable(c) => match c {
+			Command::A14 => Ok(A14),
+			Command::Achainable(c) => Ok(match c {
 				AchainableCommand::AmountHolding(arg) =>
 					Achainable(AchainableParams::AmountHolding(AchainableAmountHolding {
 						name: to_para_str(&arg.name),
@@ -544,14 +558,14 @@ impl Command {
 						chain: to_chains(&arg.chain),
 						token: to_para_str(&arg.token),
 					})),
-			},
-			Command::A20 => A20,
-			Command::OneBlock(c) => match c {
+			}),
+			Command::A20 => Ok(A20),
+			Command::OneBlock(c) => Ok(match c {
 				OneblockCommand::Completion => OneBlock(OneBlockCourseType::CourseCompletion),
 				OneblockCommand::Outstanding => OneBlock(OneBlockCourseType::CourseOutstanding),
 				OneblockCommand::Participation => OneBlock(OneBlockCourseType::CourseParticipation),
-			},
-			Command::GenericDiscordRole(c) => match c {
+			}),
+			Command::GenericDiscordRole(c) => Ok(match c {
 				GenericDiscordRoleCommand::Contest(s) => match s {
 					ContestCommand::Legend =>
 						GenericDiscordRole(GenericDiscordRoleType::Contest(ContestType::Legend)),
@@ -567,29 +581,29 @@ impl Command {
 					SoraQuizCommand::Master =>
 						GenericDiscordRole(GenericDiscordRoleType::SoraQuiz(SoraQuizType::Master)),
 				},
-			},
-			Command::BnbDomainHolding => BnbDomainHolding,
-			Command::BnbDigitalDomainClub(c) => match c {
+			}),
+			Command::BnbDomainHolding => Ok(BnbDomainHolding),
+			Command::BnbDigitalDomainClub(c) => Ok(match c {
 				BnbDigitalDomainClubCommand::Bnb999ClubMember =>
 					BnbDigitDomainClub(BnbDigitDomainType::Bnb999ClubMember),
 				BnbDigitalDomainClubCommand::Bnb10kClubMember =>
 					BnbDigitDomainClub(BnbDigitDomainType::Bnb10kClubMember),
-			},
-			Command::VIP3MembershipCard(arg) => match arg {
+			}),
+			Command::VIP3MembershipCard(arg) => Ok(match arg {
 				VIP3MembershipCardLevelCommand::Gold =>
 					VIP3MembershipCard(VIP3MembershipCardLevel::Gold),
 				VIP3MembershipCardLevelCommand::Silver =>
 					VIP3MembershipCard(VIP3MembershipCardLevel::Silver),
-			},
-			Command::WeirdoGhostGangHolder => WeirdoGhostGangHolder,
-			Command::EVMAmountHolding(c) => match c {
+			}),
+			Command::WeirdoGhostGangHolder => Ok(WeirdoGhostGangHolder),
+			Command::EVMAmountHolding(c) => Ok(match c {
 				EVMAmountHoldingCommand::Ton => EVMAmountHolding(EVMTokenType::Ton),
 				EVMAmountHoldingCommand::Trx => EVMAmountHolding(EVMTokenType::Trx),
-			},
-			Command::CryptoSummary => CryptoSummary,
-			Command::LITStaking => LITStaking,
-			Command::BRC20AmountHolder => BRC20AmountHolder,
-			Command::TokenHoldingAmount(arg) => match arg {
+			}),
+			Command::CryptoSummary => Ok(CryptoSummary),
+			Command::LITStaking => Ok(LITStaking),
+			Command::BRC20AmountHolder => Ok(BRC20AmountHolder),
+			Command::TokenHoldingAmount(arg) => Ok(match arg {
 				TokenHoldingAmountCommand::Bnb => TokenHoldingAmount(Web3TokenType::Bnb),
 				TokenHoldingAmountCommand::Eth => TokenHoldingAmount(Web3TokenType::Eth),
 				TokenHoldingAmountCommand::SpaceId => TokenHoldingAmount(Web3TokenType::SpaceId),
@@ -616,20 +630,50 @@ impl Command {
 				TokenHoldingAmountCommand::Sol => TokenHoldingAmount(Web3TokenType::Sol),
 				TokenHoldingAmountCommand::Mcrt => TokenHoldingAmount(Web3TokenType::Mcrt),
 				TokenHoldingAmountCommand::Btc => TokenHoldingAmount(Web3TokenType::Btc),
-			},
-			Command::PlatformUser(arg) => match arg {
+				TokenHoldingAmountCommand::Bean => TokenHoldingAmount(Web3TokenType::Bean),
+			}),
+			Command::PlatformUser(arg) => Ok(match arg {
 				PlatformUserCommand::KaratDaoUser => PlatformUser(PlatformUserType::KaratDaoUser),
 				PlatformUserCommand::MagicCraftStakingUser =>
 					PlatformUser(PlatformUserType::MagicCraftStakingUser),
-			},
-			Command::NftHolder(arg) => match arg {
+			}),
+			Command::NftHolder(arg) => Ok(match arg {
 				NftHolderCommand::WeirdoGhostGang => NftHolder(Web3NftType::WeirdoGhostGang),
 				NftHolderCommand::Club3Sbt => NftHolder(Web3NftType::Club3Sbt),
-			},
+			}),
 			Command::Dynamic(arg) => {
 				let decoded_id = hex::decode(&arg.smart_contract_id.clone()).unwrap();
 				let id_bytes: [u8; 20] = decoded_id.try_into().unwrap();
-				Assertion::Dynamic(H160::from(id_bytes))
+
+				let smart_contract_params = match &arg.smart_contract_param {
+					Some(p) => {
+						let params = hex::decode(p).unwrap();
+						let params_len = params.len();
+						let truncated_params = DynamicContractParams::truncate_from(params);
+						let truncated_params_len = truncated_params.len();
+						if params_len > truncated_params_len {
+							println!(
+								"The dynamic params length {} is over the maximum value {}",
+								params_len, truncated_params_len
+							);
+							Err(CliError::Extrinsic {
+								msg: format!(
+									"The dynamic params length {} is over the maximum value {}",
+									params_len, truncated_params_len
+								),
+							})
+						} else {
+							Ok(Some(truncated_params))
+						}
+					},
+					None => Ok(None),
+				}?;
+
+				Ok(Assertion::Dynamic(DynamicParams {
+					smart_contract_id: H160::from(id_bytes),
+					smart_contract_params,
+					return_log: arg.return_log.unwrap_or_default(),
+				}))
 			},
 		}
 	}

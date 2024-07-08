@@ -27,23 +27,31 @@ use crate::{
 use binary_merkle_tree::merkle_root;
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
+use itp_api_client_types::StaticEvent;
+use itp_enclave_metrics::EnclaveMetric;
 use itp_node_api::metadata::{
 	pallet_teebag::TeebagCallIndexes, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
+use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
-use itp_stf_executor::traits::{StfEnclaveSigning, StfShardVaultQuery};
+use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_stf_primitives::{
 	traits::{IndirectExecutor, TrustedCallSigning, TrustedCallVerification},
 	types::AccountId,
 };
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	parentchain::{HandleParentchainEvents, ParentchainId},
-	OpaqueCall, RsaRequest, ShardIdentifier, H256,
+	parentchain::{events::ParentchainBlockProcessed, HandleParentchainEvents, ParentchainId},
+	MrEnclave, OpaqueCall, RsaRequest, ShardIdentifier, H256,
 };
 use log::*;
+use sp_core::blake2_256;
 use sp_runtime::traits::{Block as ParentchainBlockTrait, Header, Keccak256};
-use std::{fmt::Debug, sync::Arc, vec::Vec};
+use std::{fmt::Debug, string::String, sync::Arc, vec::Vec};
+
+fn hash_of<T: Encode + ?Sized>(ev: &T) -> H256 {
+	blake2_256(&ev.encode()).into()
+}
 
 pub struct IndirectCallsExecutor<
 	ShieldingKeyRepository,
@@ -127,7 +135,7 @@ impl<
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TCS> + StfShardVaultQuery,
+	StfEnclaveSigner: StfEnclaveSigning<TCS>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	NodeMetadataProvider: AccessNodeMetadata,
 	NodeMetadataProvider::MetadataType: NodeMetadataTrait + Clone,
@@ -136,13 +144,15 @@ impl<
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
-	fn execute_indirect_calls_in_block<ParentchainBlock>(
+	fn execute_indirect_calls_in_block<ParentchainBlock, OCallApi>(
 		&self,
 		block: &ParentchainBlock,
 		events: &[u8],
+		metrics_api: Arc<OCallApi>,
 	) -> Result<Option<OpaqueCall>>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+		OCallApi: EnclaveMetricsOCallApi,
 	{
 		let block_number = *block.header().number();
 		let block_hash = block.hash();
@@ -157,6 +167,8 @@ impl<
 			.ok_or_else(|| Error::Other("Could not create events from metadata".into()))?;
 
 		let processed_events = self.parentchain_event_handler.handle_events(self, events)?;
+
+		update_parentchain_events_processed_metrics(metrics_api, &processed_events);
 
 		debug!("successfully processed {} indirect invocations", processed_events.len());
 
@@ -193,6 +205,28 @@ impl<
 	}
 }
 
+fn update_parentchain_events_processed_metrics<OCallApi>(
+	metrics_api: Arc<OCallApi>,
+	events: &[H256],
+) where
+	OCallApi: EnclaveMetricsOCallApi,
+{
+	events
+		.iter()
+		.filter_map(|ev| match *ev {
+			event if event == hash_of(ParentchainBlockProcessed::EVENT) =>
+				Some(ParentchainBlockProcessed::EVENT),
+			_ => None,
+		})
+		.for_each(|event| {
+			if let Err(e) = metrics_api
+				.update_metric(EnclaveMetric::ParentchainEventProcessed(String::from(event)))
+			{
+				warn!("Failed to update metric for {} event: {:?}", event, e);
+			}
+		});
+}
+
 impl<
 		ShieldingKeyRepository,
 		StfEnclaveSigner,
@@ -216,7 +250,7 @@ impl<
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
-	StfEnclaveSigner: StfEnclaveSigning<TCS> + StfShardVaultQuery,
+	StfEnclaveSigner: StfEnclaveSigning<TCS>,
 	TopPoolAuthor: AuthorApi<H256, H256, TCS, G> + Send + Sync + 'static,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
@@ -241,6 +275,10 @@ impl<
 
 	fn get_enclave_account(&self) -> Result<AccountId> {
 		Ok(self.stf_enclave_signer.get_enclave_account()?)
+	}
+
+	fn get_mrenclave(&self) -> Result<MrEnclave> {
+		Ok(self.stf_enclave_signer.get_mrenclave()?)
 	}
 
 	fn get_default_shard(&self) -> ShardIdentifier {
@@ -299,13 +337,13 @@ mod test {
 	const TEST_SEED: Seed = *b"12345678901234567890123456789012";
 
 	#[test]
-	fn ensure_empty_extrinsic_vec_triggers_zero_filled_merkle_root() {
+	fn ensure_empty_events_vec_triggers_zero_filled_merkle_root() {
 		// given
 		let dummy_metadata = NodeMetadataMock::new();
 		let (indirect_calls_executor, _, _) = test_fixtures([38u8; 32], dummy_metadata.clone());
 
 		let block_hash = H256::from([1; 32]);
-		let extrinsics = Vec::new();
+		let events = Vec::new();
 		let parentchain_block_processed_call_indexes =
 			dummy_metadata.parentchain_block_processed_call_indexes().unwrap();
 		let expected_call =
@@ -313,7 +351,7 @@ mod test {
 
 		// when
 		let call = indirect_calls_executor
-			.create_processed_parentchain_block_call::<Block>(block_hash, extrinsics, 1u32)
+			.create_processed_parentchain_block_call::<Block>(block_hash, events, 1u32)
 			.unwrap();
 
 		// then
@@ -321,13 +359,13 @@ mod test {
 	}
 
 	#[test]
-	fn ensure_non_empty_extrinsic_vec_triggers_non_zero_merkle_root() {
+	fn ensure_non_empty_events_vec_triggers_non_zero_merkle_root() {
 		// given
 		let dummy_metadata = NodeMetadataMock::new();
 		let (indirect_calls_executor, _, _) = test_fixtures([39u8; 32], dummy_metadata.clone());
 
 		let block_hash = H256::from([1; 32]);
-		let extrinsics = vec![H256::from([4; 32]), H256::from([9; 32])];
+		let events = vec![H256::from([4; 32]), H256::from([9; 32])];
 		let parentchain_block_processed_call_indexes =
 			dummy_metadata.parentchain_block_processed_call_indexes().unwrap();
 
@@ -336,7 +374,7 @@ mod test {
 
 		// when
 		let call = indirect_calls_executor
-			.create_processed_parentchain_block_call::<Block>(block_hash, extrinsics, 1u32)
+			.create_processed_parentchain_block_call::<Block>(block_hash, events, 1u32)
 			.unwrap();
 
 		// then

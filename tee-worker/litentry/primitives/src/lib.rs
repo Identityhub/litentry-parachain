@@ -56,6 +56,7 @@ pub use parentchain_primitives::{
 		},
 		bnb_domain::BnbDigitDomainType,
 		contest::ContestType,
+		dynamic::{DynamicContractParams, DynamicParams},
 		evm_amount_holding::EVMTokenType,
 		generic_discord_role::GenericDiscordRoleType,
 		network::{

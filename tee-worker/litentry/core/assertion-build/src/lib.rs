@@ -63,9 +63,9 @@ use litentry_primitives::{
 	p2pkh_address, p2sh_address, p2tr_address, p2wpkh_address, AchainableAmount,
 	AchainableAmountHolding, AchainableAmountToken, AchainableAmounts, AchainableBasic,
 	AchainableBetweenPercents, AchainableDate, AchainableDateInterval, AchainableDatePercent,
-	AchainableParams, AchainableToken, Assertion, ErrorDetail, ErrorString, Identity,
-	IdentityNetworkTuple, IntoErrorDetail, OneBlockCourseType, ParameterString, VCMPError as Error,
-	Web3Network,
+	AchainableParams, AchainableToken, Assertion, DynamicParams, ErrorDetail, ErrorString,
+	Identity, IdentityNetworkTuple, IntoErrorDetail, OneBlockCourseType, ParameterString,
+	VCMPError as Error, Web3Network,
 };
 use log::*;
 use rust_base58::ToBase58;
@@ -186,6 +186,7 @@ fn pubkey_to_address(network: &Web3Network, pubkey: &str) -> String {
 		| Web3Network::Bsc
 		| Web3Network::Polygon
 		| Web3Network::Arbitrum
+		| Web3Network::Combo
 		| Web3Network::Solana => "".to_string(),
 	}
 }

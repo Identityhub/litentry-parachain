@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::alloc::string::String;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::ConstU32, BoundedVec};
@@ -99,6 +100,9 @@ pub enum Web3Network {
 	// solana
 	#[codec(index = 16)]
 	Solana,
+	// combo L2 of BSC
+	#[codec(index = 17)]
+	Combo,
 }
 
 // mainly used in CLI
@@ -123,7 +127,7 @@ impl Web3Network {
 	}
 
 	pub fn is_evm(&self) -> bool {
-		matches!(self, Self::Ethereum | Self::Bsc | Self::Polygon | Self::Arbitrum)
+		matches!(self, Self::Ethereum | Self::Bsc | Self::Polygon | Self::Arbitrum | Self::Combo)
 	}
 
 	pub fn is_bitcoin(&self) -> bool {
@@ -139,6 +143,76 @@ impl Web3Network {
 
 	pub fn is_solana(&self) -> bool {
 		matches!(self, Self::Solana)
+	}
+
+	pub fn get_code(&self) -> u8 {
+		match self {
+			Web3Network::Polkadot => 0,
+			Web3Network::Kusama => 1,
+			Web3Network::Litentry => 2,
+			Web3Network::Litmus => 3,
+			Web3Network::LitentryRococo => 4,
+			Web3Network::Khala => 5,
+			Web3Network::SubstrateTestnet => 6,
+			Web3Network::Ethereum => 7,
+			Web3Network::Bsc => 8,
+			Web3Network::BitcoinP2tr => 9,
+			Web3Network::BitcoinP2pkh => 10,
+			Web3Network::BitcoinP2sh => 11,
+			Web3Network::BitcoinP2wpkh => 12,
+			Web3Network::BitcoinP2wsh => 13,
+			Web3Network::Polygon => 14,
+			Web3Network::Arbitrum => 15,
+			Web3Network::Solana => 16,
+			Web3Network::Combo => 17,
+		}
+	}
+
+	pub fn from_code(code: u8) -> Option<Web3Network> {
+		match code {
+			0 => Some(Web3Network::Polkadot),
+			1 => Some(Web3Network::Kusama),
+			2 => Some(Web3Network::Litentry),
+			3 => Some(Web3Network::Litmus),
+			4 => Some(Web3Network::LitentryRococo),
+			5 => Some(Web3Network::Khala),
+			6 => Some(Web3Network::SubstrateTestnet),
+			7 => Some(Web3Network::Ethereum),
+			8 => Some(Web3Network::Bsc),
+			9 => Some(Web3Network::BitcoinP2tr),
+			10 => Some(Web3Network::BitcoinP2pkh),
+			11 => Some(Web3Network::BitcoinP2sh),
+			12 => Some(Web3Network::BitcoinP2wpkh),
+			13 => Some(Web3Network::BitcoinP2wsh),
+			14 => Some(Web3Network::Polygon),
+			15 => Some(Web3Network::Arbitrum),
+			16 => Some(Web3Network::Solana),
+			17 => Some(Web3Network::Combo),
+			_ => None,
+		}
+	}
+
+	pub fn get_name(&self) -> String {
+		match self {
+			Web3Network::Polkadot => "polkadot".into(),
+			Web3Network::Kusama => "kusama".into(),
+			Web3Network::Litentry => "litentry".into(),
+			Web3Network::Litmus => "litmus".into(),
+			Web3Network::LitentryRococo => "litentry_rococo".into(),
+			Web3Network::Khala => "khala".into(),
+			Web3Network::SubstrateTestnet => "substrate_testnet".into(),
+			Web3Network::Ethereum => "ethereum".into(),
+			Web3Network::Bsc => "bsc".into(),
+			Web3Network::BitcoinP2tr => "bitcoin_p2tr".into(),
+			Web3Network::BitcoinP2pkh => "bitcoin_p2pkh".into(),
+			Web3Network::BitcoinP2sh => "bitcoin_p2sh".into(),
+			Web3Network::BitcoinP2wpkh => "bitcoin_p2wpkh".into(),
+			Web3Network::BitcoinP2wsh => "bitcoin_p2wsh".into(),
+			Web3Network::Polygon => "polygon".into(),
+			Web3Network::Arbitrum => "arbitrum".into(),
+			Web3Network::Solana => "solana".into(),
+			Web3Network::Combo => "combo".into(),
+		}
 	}
 }
 
@@ -195,6 +269,7 @@ mod tests {
 					Web3Network::Polygon => true,
 					Web3Network::Arbitrum => true,
 					Web3Network::Solana => false,
+					Web3Network::Combo => true,
 				}
 			)
 		})
@@ -223,6 +298,7 @@ mod tests {
 					Web3Network::Polygon => false,
 					Web3Network::Arbitrum => false,
 					Web3Network::Solana => false,
+					Web3Network::Combo => false,
 				}
 			)
 		})
@@ -251,6 +327,7 @@ mod tests {
 					Web3Network::Polygon => false,
 					Web3Network::Arbitrum => false,
 					Web3Network::Solana => false,
+					Web3Network::Combo => false,
 				}
 			)
 		})
@@ -279,6 +356,7 @@ mod tests {
 					Web3Network::Polygon => false,
 					Web3Network::Arbitrum => false,
 					Web3Network::Solana => true,
+					Web3Network::Combo => false,
 				}
 			)
 		})

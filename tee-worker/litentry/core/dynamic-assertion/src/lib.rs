@@ -41,12 +41,14 @@ pub struct AssertionResult {
 	pub assertions: Vec<String>,
 	pub schema_url: String,
 	pub meet: bool,
+	pub contract_logs: Vec<String>,
 }
 
-pub trait AssertionExecutor<I> {
+pub trait AssertionExecutor<I, P> {
 	fn execute(
 		&self,
 		assertion_id: I,
+		assertion_params: P,
 		identities: &[IdentityNetworkTuple],
 	) -> Result<AssertionResult, String>;
 }
