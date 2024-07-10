@@ -41,16 +41,17 @@ use lc_evm_dynamic_assertions::{sealing::io::AssertionsSeal, ASSERTIONS_FILE};
 
 use log::*;
 use rustls::{ClientConfig, ClientSession, Stream};
-use sgx_types::*;
+use sgx_types::{error::*, types::*};
 use std::{
 	backtrace::{self, PrintFormat},
-	convert::TryInto,
 	io::{Read, Write},
 	net::TcpStream,
+	os::fd::FromRawFd,
 	slice,
 	sync::Arc,
 	vec::Vec,
 };
+
 /// Client part of the TCP-level connection and the underlying TLS-level session.
 ///
 /// Includes a seal handler, which handles the storage part of the received data.
@@ -147,9 +148,7 @@ where
 	fn read_header(&mut self, start_byte: u8) -> EnclaveResult<TcpHeader> {
 		debug!("Read first byte: {:?}", start_byte);
 		// The first sent byte indicates the payload type.
-		let opcode: Opcode = start_byte
-			.try_into()
-			.map_err(|_| EnclaveError::Other("Could not convert opcode".into()))?;
+		let opcode: Opcode = start_byte.into();
 		debug!("Read header opcode: {:?}", opcode);
 		// The following bytes contain the payload length, which is a u64.
 		let mut payload_length_buffer = [0u8; std::mem::size_of::<u64>()];
@@ -171,21 +170,21 @@ where
 #[no_mangle]
 pub unsafe extern "C" fn request_state_provisioning(
 	socket_fd: c_int,
-	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	sign_type: QuoteSignType,
+	quoting_enclave_target_info: Option<&TargetInfo>,
 	quote_size: Option<&u32>,
 	shard: *const u8,
 	shard_size: u32,
 	skip_ra: c_int,
-) -> sgx_status_t {
-	let _ = backtrace::enable_backtrace("enclave.signed.so", PrintFormat::Short);
+) -> SgxStatus {
+	let _ = backtrace::enable_backtrace(PrintFormat::Short);
 	let shard = ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
 	let state_handler = match GLOBAL_STATE_HANDLER_COMPONENT.get() {
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -193,7 +192,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -201,7 +200,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -209,7 +208,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -227,7 +226,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -250,7 +249,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		return e.into()
 	};
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 /// Internal [`request_state_provisioning`] function to be able to use the handy `?` operator.
@@ -258,8 +257,8 @@ pub unsafe extern "C" fn request_state_provisioning(
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
-	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	sign_type: QuoteSignType,
+	quoting_enclave_target_info: Option<&TargetInfo>,
 	quote_size: Option<&u32>,
 	shard: ShardIdentifier,
 	skip_ra: c_int,
@@ -289,8 +288,8 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 }
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
-	sign_type: sgx_quote_sign_type_t,
-	quoting_enclave_target_info: Option<&sgx_target_info_t>,
+	sign_type: QuoteSignType,
+	quoting_enclave_target_info: Option<&TargetInfo>,
 	quote_size: Option<&u32>,
 	ocall_api: A,
 	skip_ra: bool,
@@ -330,6 +329,6 @@ fn tls_client_session_stream(
 	let dns_name = webpki::DNSNameRef::try_from_ascii_str(DEV_HOSTNAME)
 		.map_err(|e| EnclaveError::Other(e.into()))?;
 	let sess = rustls::ClientSession::new(&Arc::new(client_config), dns_name);
-	let conn = TcpStream::new(socket_fd)?;
+	let conn = unsafe { TcpStream::from_raw_fd(socket_fd) };
 	Ok((sess, conn))
 }

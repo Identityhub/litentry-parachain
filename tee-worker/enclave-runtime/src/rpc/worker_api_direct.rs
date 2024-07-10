@@ -51,7 +51,7 @@ use lc_identity_verification::web2::twitter;
 use litentry_macros::{if_development, if_development_or};
 use litentry_primitives::{aes_decrypt, AesRequest, DecryptableRequest, Identity};
 use log::debug;
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use sgx_crypto::rsa::Rsa3072PublicKey;
 use sp_core::Pair;
 use sp_runtime::OpaqueExtrinsic;
 use std::{borrow::ToOwned, boxed::Box, format, str, string::String, sync::Arc, vec::Vec};
@@ -81,7 +81,8 @@ pub fn public_api_rpc_handler<Author, GetterExecutor, AccessShieldingKey, OcallA
 where
 	Author: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
-	AccessShieldingKey: AccessPubkey<KeyType = Rsa3072PubKey> + AccessKey + Send + Sync + 'static,
+	AccessShieldingKey:
+		AccessPubkey<KeyType = Rsa3072PublicKey> + AccessKey + Send + Sync + 'static,
 	<AccessShieldingKey as AccessKey>::KeyType:
 		ShieldingCryptoDecrypt + ShieldingCryptoEncrypt + DeriveEd25519 + Send + Sync + 'static,
 	OcallApi: EnclaveAttestationOCallApi + Send + Sync + 'static,
@@ -104,7 +105,7 @@ where
 			},
 		};
 
-		let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
+		let rsa_pubkey_json = match sgx_serialize::json::encode(&rsa_pubkey) {
 			Ok(k) => k,
 			Err(x) => {
 				let error_msg: String =
@@ -296,7 +297,7 @@ where
 		let return_value: Result<AesOutput, String> = (|| {
 			let hex_encoded_params =
 				params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
-			let param = &hex_encoded_params.get(0).ok_or("Could not get first param")?;
+			let param = &hex_encoded_params.first().ok_or("Could not get first param")?;
 			let mut request = AesRequest::from_hex(param).map_err(|e| format!("{:?}", e))?;
 
 			let aes_key = request
@@ -417,7 +418,7 @@ where
 						},
 						Err(e) => {
 							let error_msg = format!("load shard failure due to: {:?}", e);
-							return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+							Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 						},
 					}
 				},
@@ -504,7 +505,7 @@ fn execute_rsa_getter_inner<GE: ExecuteGetter>(
 ) -> Result<Option<Vec<u8>>, String> {
 	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
 
-	let param = &hex_encoded_params.get(0).ok_or("Could not get first param")?;
+	let param = &hex_encoded_params.first().ok_or("Could not get first param")?;
 	let request = RsaRequest::from_hex(param).map_err(|e| format!("{:?}", e))?;
 
 	let shard: ShardIdentifier = request.shard();
@@ -528,7 +529,7 @@ fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 		))
 	}
 
-	let param = &hex_encoded_params.get(0).ok_or("Could not get first param")?;
+	let param = &hex_encoded_params.first().ok_or("Could not get first param")?;
 	let encoded_quote_to_forward: Vec<u8> =
 		litentry_hex_utils::decode_hex(param).map_err(|e| format!("{:?}", e))?;
 
@@ -561,7 +562,7 @@ fn attesteer_forward_ias_attestation_report_inner(
 		))
 	}
 
-	let param = &hex_encoded_params.get(0).ok_or("Could not get first param")?;
+	let param = &hex_encoded_params.first().ok_or("Could not get first param")?;
 	let ias_attestation_report =
 		litentry_hex_utils::decode_hex(param).map_err(|e| format!("{:?}", e))?;
 

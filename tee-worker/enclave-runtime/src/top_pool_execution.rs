@@ -69,7 +69,7 @@ use its_sidechain::{
 };
 use litentry_macros::if_development;
 use log::*;
-use sgx_types::sgx_status_t;
+use sgx_types::error::*;
 use sp_core::{crypto::UncheckedFrom, Pair};
 use sp_runtime::{
 	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
@@ -77,12 +77,12 @@ use sp_runtime::{
 use std::{sync::Arc, time::Instant, vec::Vec};
 
 #[no_mangle]
-pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
+pub unsafe extern "C" fn execute_trusted_calls() -> SgxStatus {
 	if let Err(e) = execute_top_pool_trusted_calls_internal() {
 		return e.into()
 	}
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 /// Internal [`execute_trusted_calls`] function to be able to use the `?` operator.
@@ -202,7 +202,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 				if let Some(ref fail_on_demand) = *fail_on_demand {
 					fail_on_demand.next_slot();
 					if fail_on_demand.check_before_on_slot() {
-						Result::Err(crate::error::Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
+						Result::Err(crate::error::Error::Sgx(SgxStatus::Unexpected))?;
 					}
 				}
 			});
@@ -222,7 +222,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			if_development!({
 				if let Some(ref fail_on_demand) = *fail_on_demand {
 					if fail_on_demand.check_after_on_slot() {
-						Result::Err(crate::error::Error::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))?;
+						Result::Err(crate::error::Error::Sgx(SgxStatus::Unexpected))?;
 					}
 				}
 			});

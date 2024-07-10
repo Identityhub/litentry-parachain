@@ -15,10 +15,6 @@
 
 */
 
-#[cfg(feature = "sgx")]
-use std::sync::SgxRwLock as RwLock;
-
-#[cfg(feature = "std")]
 use std::sync::RwLock;
 
 use crate::{

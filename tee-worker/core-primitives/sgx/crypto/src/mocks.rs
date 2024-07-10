@@ -14,11 +14,6 @@
 	limitations under the License.
 
 */
-
-#[cfg(feature = "sgx")]
-use std::sync::SgxRwLock as RwLock;
-
-#[cfg(feature = "std")]
 use std::sync::RwLock;
 
 use crate::{
@@ -27,7 +22,7 @@ use crate::{
 	key_repository::{AccessKey, MutateKey},
 };
 use itp_sgx_io::{SealedIO, StaticSealedIO};
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto::rsa::Rsa3072KeyPair;
 
 #[derive(Default)]
 pub struct KeyRepositoryMock<KeyType>

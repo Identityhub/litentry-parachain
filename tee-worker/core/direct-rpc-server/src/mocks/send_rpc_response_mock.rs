@@ -15,15 +15,9 @@
 
 */
 
-#[cfg(feature = "sgx")]
-use std::sync::SgxRwLock as RwLock;
-
-#[cfg(feature = "std")]
-use std::sync::RwLock;
-
 use crate::{DirectRpcResult, RpcHash, SendRpcResponse};
 use itp_types::TrustedOperationStatus;
-use std::vec::Vec;
+use std::{sync::RwLock, vec::Vec};
 
 /// Send RPC response mock.
 #[derive(Default)]

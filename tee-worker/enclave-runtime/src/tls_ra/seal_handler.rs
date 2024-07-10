@@ -32,7 +32,8 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_types::ShardIdentifier;
 use lc_evm_dynamic_assertions::sealing::UnsealedAssertions;
 use log::*;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto::rsa::Rsa3072KeyPair;
+use sgx_types::types::Rsa3072Param;
 use std::{sync::Arc, vec::Vec};
 
 /// Handles the sealing and unsealing of the shielding key, state key and the state.
@@ -111,10 +112,13 @@ impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal, 
 	AssertionsSeal: SealedIO<Unsealed = UnsealedAssertions>,
 {
 	fn seal_shielding_key(&self, bytes: &[u8]) -> EnclaveResult<()> {
-		let key: Rsa3072KeyPair = serde_json::from_slice(bytes).map_err(|e| {
-			error!("    [Enclave] Received Invalid RSA key");
-			EnclaveError::Other(e.into())
-		})?;
+		let key_str = std::str::from_utf8(bytes)
+			.map_err(|_| EnclaveError::Other("RSA key seal error".into()))?;
+		// TODO: the usage of Rsa3072Param is temporary and should be removed after the migration to
+		// the new sgx sdk is done. Then we can directly use Rsa3072KeyPair
+		let rsa_param: Rsa3072Param = sgx_serialize::json::decode(key_str)
+			.map_err(|_| EnclaveError::Other("RSA key seal error".into()))?;
+		let key: Rsa3072KeyPair = rsa_param.into();
 		self.shielding_key_repository.update_key(key)?;
 		info!("Successfully stored a new shielding key");
 		Ok(())
@@ -188,7 +192,9 @@ impl<ShieldingKeyRepository, StateKeyRepository, StateHandler, LightClientSeal, 
 			.shielding_key_repository
 			.retrieve_key()
 			.map_err(|e| EnclaveError::Other(format!("{:?}", e).into()))?;
-		serde_json::to_vec(&shielding_key).map_err(|e| EnclaveError::Other(e.into()))
+		sgx_serialize::json::encode(&shielding_key)
+			.map(|s| s.as_bytes().to_vec())
+			.map_err(|_| EnclaveError::Other("RSA key unseal error".into()))
 	}
 
 	fn unseal_state_key(&self) -> EnclaveResult<Vec<u8>> {
@@ -237,7 +243,8 @@ pub mod test {
 
 	pub fn seal_shielding_key_works() {
 		let seal_handler = SealHandlerMock::default();
-		let key_pair_in_bytes = serde_json::to_vec(&Rsa3072KeyPair::default()).unwrap();
+		let encoded_key = sgx_serialize::json::encode(&Rsa3072KeyPair::default()).unwrap();
+		let key_pair_in_bytes = encoded_key.as_bytes();
 
 		let result = seal_handler.seal_shielding_key(&key_pair_in_bytes);
 
@@ -254,8 +261,8 @@ pub mod test {
 
 	pub fn unseal_seal_shielding_key_works() {
 		let seal_handler = SealHandlerMock::default();
-
-		let key_pair_in_bytes = seal_handler.unseal_shielding_key().unwrap();
+		let unsealed_key = seal_handler.unseal_shielding_key().unwrap();
+		let key_pair_in_bytes = unsealed_key.as_slice();
 
 		let result = seal_handler.seal_shielding_key(&key_pair_in_bytes);
 

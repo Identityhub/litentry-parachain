@@ -7,10 +7,10 @@ edition = "2021"
 
 [dependencies]
 # std dependencies
-futures = { version = "0.3.8", optional = true }
+futures = { version = "0.3", optional = true }
 
 # sgx dependencies
-futures_sgx = { package = "futures", git = "https://github.com/mesalock-linux/futures-rs-sgx", optional = true }
+futures_sgx = { package = "futures", git = "https://github.com/Kailai-Wang/futures-rs-sgx", branch = "sgx-sdk-2.0.0", optional = true }
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["net", "thread"], optional = true }
 
 # no_std dependencies
@@ -35,7 +35,6 @@ sgx = [
     "futures_sgx",
     "sgx_tstd",
     "lc-stf-task-sender/sgx",
-    "futures_sgx",
 ]
 std = [
     "futures",
@@ -44,5 +43,4 @@ std = [
     "sp-std/std",
     "itp-types/std",
     "lc-stf-task-sender/std",
-    "futures",
 ]

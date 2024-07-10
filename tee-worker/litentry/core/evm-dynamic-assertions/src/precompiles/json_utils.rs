@@ -26,7 +26,7 @@ pub fn get_array_len(input: Vec<u8>, precompiles: &Precompiles) -> PrecompileRes
 			},
 		};
 
-	let json = decoded.get(0).unwrap().clone().into_string().unwrap();
+	let json = decoded.first().unwrap().clone().into_string().unwrap();
 	let pointer = decoded.get(1).unwrap().clone().into_string().unwrap();
 
 	let value: Value = match serde_json::from_str(&json) {

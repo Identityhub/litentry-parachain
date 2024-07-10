@@ -25,18 +25,12 @@ use primitive_types::H160;
 use std::{
 	collections::HashMap,
 	string::{String, ToString},
+	sync::Mutex,
 	vec,
 	vec::Vec,
 };
 
 pub type SmartContractByteCode = Vec<u8>;
-
-#[cfg(feature = "sgx")]
-use std::sync::SgxMutex as Mutex;
-
-#[cfg(feature = "std")]
-use std::sync::Mutex;
-
 #[allow(clippy::type_complexity)]
 pub struct InMemorySmartContractRepo {
 	map: Mutex<HashMap<H160, (Vec<u8>, Vec<String>)>>,

@@ -17,7 +17,7 @@ use sp_core::{ed25519::Pair as Ed25519Pair, Pair};
 
 #[test]
 fn test_threadpool_behaviour() {
-	let shielding_key = ShieldingCryptoMock::default();
+	let shielding_key = ShieldingCryptoMock::new(true);
 	let shielding_key_repository_mock = KeyRepositoryMock::new(shielding_key.clone());
 	let author_mock = AuthorApiMock::default();
 	let stf_enclave_signer_mock = StfEnclaveSignerMock::default();

@@ -29,9 +29,7 @@ use itp_enclave_api::{
 use itp_node_api::api_client::PalletTeebagApi;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::{ShardIdentifier, WorkerType};
-use log::info;
-use sgx_types::sgx_quote_sign_type_t;
-use sp_runtime::MultiSigner;
+use sgx_types::types::*;
 use std::string::String;
 
 pub(crate) fn sync_state<
@@ -55,7 +53,7 @@ pub(crate) fn sync_state<
 
 	enclave_request_state_provisioning(
 		enclave_api,
-		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
+		QuoteSignType::Unlinkable,
 		&provider_url,
 		shard,
 		skip_ra,

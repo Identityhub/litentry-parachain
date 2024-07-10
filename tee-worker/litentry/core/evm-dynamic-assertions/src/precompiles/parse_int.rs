@@ -27,7 +27,7 @@ pub fn parse_int(input: Vec<u8>) -> PrecompileResult {
 		},
 	};
 
-	let string_value = decoded.get(0).and_then(|v| v.clone().into_string());
+	let string_value = decoded.first().and_then(|v| v.clone().into_string());
 
 	let value = match string_value {
 		Some(v) => match U256::from_dec_str(v.as_str()) {

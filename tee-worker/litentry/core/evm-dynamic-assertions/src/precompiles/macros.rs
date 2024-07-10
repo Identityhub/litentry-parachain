@@ -34,7 +34,7 @@ macro_rules! json_get_fn {
 			};
 
 			// safe to unwrap
-			let json = decoded.get(0).unwrap().clone().into_string().unwrap();
+			let json = decoded.first().unwrap().clone().into_string().unwrap();
 			let pointer = decoded.get(1).unwrap().clone().into_string().unwrap();
 			let value: serde_json::Value = match serde_json::from_str(&json) {
 				Ok(v) => v,
@@ -208,7 +208,7 @@ pub fn extract_http_headers(
 		.iter()
 		.map(|v| {
 			let name =
-				v.clone().into_tuple().unwrap().get(0).unwrap().clone().into_string().unwrap();
+				v.clone().into_tuple().unwrap().first().unwrap().clone().into_string().unwrap();
 			let value =
 				v.clone().into_tuple().unwrap().get(1).unwrap().clone().into_string().unwrap();
 

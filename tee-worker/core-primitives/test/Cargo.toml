@@ -6,12 +6,12 @@ edition = "2021"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
-sgx-crypto-helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", package = "sgx_crypto_helper", default-features = false }
+sgx_crypto = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview", default-features = false }
 
 # sgx deps
-jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/scs/jsonrpc", branch = "no_std_v18", default-features = false, optional = true }
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+jsonrpc-core_sgx = { package = "jsonrpc-core", git = "https://github.com/Kailai-Wang/jsonrpc-sgx", branch = "sgx-sdk-2.0.0", default-features = false, optional = true }
+sgx_tstd = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview", optional = true }
+sgx_types = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
 
 # substrate deps
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -34,6 +34,7 @@ itp-types = { path = "../types", default-features = false, features = ["test"] }
 
 # litentry
 hex = { version = "0.4.3", default-features = false }
+lc-rsa-wrapper = { path = "../../litentry/core/rsa-wrapper", optional = true }
 lc-teebag-storage = { path = "../../litentry/core/teebag-storage", default-features = false }
 litentry-primitives = { path = "../../litentry/primitives", default-features = false }
 
@@ -41,6 +42,7 @@ litentry-primitives = { path = "../../litentry/primitives", default-features = f
 default = ["std"]
 std = [
     "codec/std",
+    "sgx_crypto/ucrypto",
     "itp-node-api-metadata-provider/std",
     "itp-node-api/std",
     "itp-ocall-api/std",
@@ -59,6 +61,7 @@ std = [
     "sp-std/std",
     "litentry-primitives/std",
     "lc-teebag-storage/std",
+    "lc-rsa-wrapper",
 ]
 sgx = [
     "itp-node-api/sgx",
@@ -69,5 +72,6 @@ sgx = [
     "itp-time-utils/sgx",
     "jsonrpc-core_sgx",
     "sgx_tstd",
+    "sgx_crypto/tcrypto",
     "litentry-primitives/sgx",
 ]

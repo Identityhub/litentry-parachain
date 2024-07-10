@@ -11,7 +11,7 @@ futures = { version = "0.3.8", optional = true }
 thiserror = { version = "1.0.26", optional = true }
 
 # sgx dependencies
-futures_sgx = { package = "futures", git = "https://github.com/mesalock-linux/futures-rs-sgx", optional = true, features = ["thread-pool"] }
+futures_sgx = { package = "futures", git = "https://github.com/Kailai-Wang/futures-rs-sgx", branch = "sgx-sdk-2.0.0", features = ["thread-pool"], optional = true }
 sgx_tstd = { git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master", features = ["net", "thread"], optional = true }
 
 # no_std dependencies
@@ -58,6 +58,7 @@ sgx = [
     "futures_sgx",
     "sgx_tstd",
     "ita-stf/sgx",
+    "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
     "itp-stf-executor/sgx",
     "itp-stf-state-handler/sgx",
@@ -82,6 +83,7 @@ std = [
     "log/std",
     "ita-stf/std",
     "itp-types/std",
+    "itp-sgx-crypto/std",
     "itp-top-pool-author/std",
     "itp-stf-executor/std",
     "itp-stf-state-handler/std",

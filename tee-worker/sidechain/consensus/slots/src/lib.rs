@@ -50,10 +50,6 @@ use std::{fmt::Debug, time::Duration, vec::Vec};
 mod slot_stream;
 mod slots;
 
-#[cfg(feature = "sgx")]
-use std::sync::SgxRwLock as RwLock;
-
-#[cfg(feature = "std")]
 use std::sync::RwLock;
 
 #[cfg(test)]
@@ -65,7 +61,6 @@ mod per_shard_slot_worker_tests;
 use itp_types::parentchain::ParentchainCall;
 #[cfg(feature = "std")]
 pub use slot_stream::*;
-pub use slots::*;
 
 /// The result of [`SlotWorker::on_slot`].
 #[derive(Debug, Clone, Encode, From)]

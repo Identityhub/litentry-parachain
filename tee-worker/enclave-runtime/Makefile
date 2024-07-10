@@ -32,17 +32,18 @@ WORKER_MODE ?= sidechain
 WORKER_DEV ?= 0
 WORKER_ENV_DATA_PROVIDERS_CONFIG ?= 0
 
+######## Litentry ########
+# otherwise `sgx_crypto_sys` and `sgx_tlibc_sys` complain prebuilt libs can't be found
+# There's `optimized_libs/external/libirc/efi2/libirc.a` but not `libm*`
+USE_OPT_LIBS ?= 0
+
 Rust_Enclave_Name := libenclave.a
 Rust_Enclave_Files := $(wildcard src/*.rs) $(wildcard ../stf/src/*.rs)
 RUSTFLAGS :="-C target-feature=+avx2"
 
-ifeq ($(SGX_DEBUG), 1)
-	OUTPUT_PATH := debug
-	CARGO_TARGET :=
-else
-	OUTPUT_PATH := release
-	CARGO_TARGET := --release
-endif
+# see ../Makefile why debug symbol is used
+OUTPUT_PATH := debug
+CARGO_TARGET :=
 
 ifeq ($(WORKER_DEV), 1)
 	ADDITIONAL_FEATURES := $(ADDITIONAL_FEATURES),development

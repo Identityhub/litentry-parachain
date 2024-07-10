@@ -27,7 +27,7 @@ pub fn hex_to_number(input: Vec<u8>) -> PrecompileResult {
 		},
 	};
 
-	let string_value = decoded.get(0).and_then(|v| v.clone().into_string());
+	let string_value = decoded.first().and_then(|v| v.clone().into_string());
 
 	let value = match string_value {
 		Some(s) => {

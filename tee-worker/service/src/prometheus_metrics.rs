@@ -290,7 +290,7 @@ fn handle_stf_call_request(req: RequestType, time: f64) {
 }
 
 fn assertion_to_string(assertion: Assertion) -> String {
-	let assertion = match assertion {
+	match assertion {
 		Assertion::A1 => "A1".into(),
 		Assertion::A2(_) => "A2".into(),
 		Assertion::A3(..) => "A3".into(),
@@ -320,8 +320,7 @@ fn assertion_to_string(assertion: Assertion) -> String {
 		Assertion::Dynamic(param) => {
 			format!("DynamicAssertion({:?})", param.smart_contract_id)
 		},
-	};
-	assertion
+	}
 }
 
 #[derive(Serialize, Deserialize, Debug)]

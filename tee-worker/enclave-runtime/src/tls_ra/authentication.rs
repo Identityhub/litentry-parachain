@@ -19,7 +19,7 @@
 use itp_attestation_handler::cert;
 use itp_ocall_api::EnclaveAttestationOCallApi;
 use log::*;
-use sgx_types::*;
+use sgx_types::error::*;
 use webpki::DNSName;
 
 pub struct ClientAuth<A> {
@@ -52,10 +52,13 @@ where
 	) -> Result<rustls::ClientCertVerified, rustls::TLSError> {
 		debug!("client cert: {:?}", certs);
 		let issuer =
-			certs.get(0).ok_or(rustls::TLSError::NoCertificatesPresented).and_then(|cert| {
-				cert::parse_cert_issuer(&cert.0)
-					.map_err(|_| rustls::TLSError::NoCertificatesPresented)
-			})?;
+			certs
+				.first()
+				.ok_or(rustls::TLSError::NoCertificatesPresented)
+				.and_then(|cert| {
+					cert::parse_cert_issuer(&cert.0)
+						.map_err(|_| rustls::TLSError::NoCertificatesPresented)
+				})?;
 		info!("client signer (issuer) is: 0x{}", hex::encode(issuer));
 
 		// This call will automatically verify cert is properly signed
@@ -76,7 +79,7 @@ where
 			Some(cert) => {
 				match cert::verify_mra_cert(&cert.0, true, is_dcap, &self.attestation_ocall) {
 					Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
-					Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
+					Err(SgxStatus::UpdateNeeded) =>
 						if self.outdated_ok {
 							warn!("outdated_ok is set, overriding outdated error");
 							Ok(rustls::ClientCertVerified::assertion())
@@ -117,10 +120,13 @@ where
 	) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
 		debug!("server cert: {:?}", certs);
 		let issuer =
-			certs.get(0).ok_or(rustls::TLSError::NoCertificatesPresented).and_then(|cert| {
-				cert::parse_cert_issuer(&cert.0)
-					.map_err(|_| rustls::TLSError::NoCertificatesPresented)
-			})?;
+			certs
+				.first()
+				.ok_or(rustls::TLSError::NoCertificatesPresented)
+				.and_then(|cert| {
+					cert::parse_cert_issuer(&cert.0)
+						.map_err(|_| rustls::TLSError::NoCertificatesPresented)
+				})?;
 		info!("server signer (issuer) is: 0x{}", hex::encode(issuer));
 
 		if self.skip_ra {
@@ -141,7 +147,7 @@ where
 			Some(cert) => {
 				match cert::verify_mra_cert(&cert.0, true, is_dcap, &self.attestation_ocall) {
 					Ok(()) => Ok(rustls::ServerCertVerified::assertion()),
-					Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
+					Err(SgxStatus::UpdateNeeded) =>
 						if self.outdated_ok {
 							warn!("outdated_ok is set, overriding outdated error");
 							Ok(rustls::ServerCertVerified::assertion())

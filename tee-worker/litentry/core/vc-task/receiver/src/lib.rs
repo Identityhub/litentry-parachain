@@ -15,11 +15,6 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use crate::sgx_reexport_prelude::*;
 
-#[cfg(feature = "std")]
-use std::sync::Mutex;
-#[cfg(feature = "sgx")]
-use std::sync::SgxMutex as Mutex;
-
 use codec::{Decode, Encode};
 use frame_support::{ensure, sp_runtime::traits::One};
 use futures::executor::ThreadPoolBuilder;
@@ -69,7 +64,7 @@ use std::{
 	string::ToString,
 	sync::{
 		mpsc::{channel, Sender},
-		Arc,
+		Arc, Mutex,
 	},
 	thread,
 	time::Instant,
@@ -93,7 +88,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, N, AR>(
 	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	let vc_task_receiver = init_vc_task_sender();
-	let n_workers = 960;
+	let n_workers = 128;
 	let pool = ThreadPoolBuilder::new().pool_size(n_workers).create().unwrap();
 
 	let (tc_sender, tc_receiver) = channel::<(ShardIdentifier, TrustedCall)>();

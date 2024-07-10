@@ -94,7 +94,7 @@ use lazy_static::lazy_static;
 use lc_data_providers::DataProviderConfig;
 use lc_evm_dynamic_assertions::{repository::EvmAssertionRepository, sealing::io::AssertionsSeal};
 use litentry_primitives::BroadcastedRequest;
-use sgx_crypto_helper::rsa3072::Rsa3072KeyPair;
+use sgx_crypto::rsa::Rsa3072KeyPair;
 use sgx_tstd::vec::Vec;
 use sp_core::{ed25519, ed25519::Pair};
 use std::sync::Arc;

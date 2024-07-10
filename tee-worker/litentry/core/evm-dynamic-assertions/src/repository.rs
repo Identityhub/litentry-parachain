@@ -29,14 +29,9 @@ use std::{
 	collections::HashMap,
 	format,
 	string::{String, ToString},
+	sync::Mutex,
 	vec::Vec,
 };
-
-#[cfg(feature = "sgx")]
-use std::sync::SgxMutex as Mutex;
-
-#[cfg(feature = "std")]
-use std::sync::Mutex;
 
 pub type AssertionsMap = HashMap<AssertionId, (SmartContractByteCode, Vec<String>)>;
 

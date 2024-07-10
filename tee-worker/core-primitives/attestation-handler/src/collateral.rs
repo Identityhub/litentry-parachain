@@ -14,12 +14,11 @@
 	limitations under the License.
 
 */
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::serde_json;
-use sgx_types::sgx_ql_qve_collateral_t;
+
+use sgx_types::types::CQlQveCollateral;
 use std::{io::Write, string::String, vec::Vec};
 
-/// This is a rust-ified version of the type sgx_ql_qve_collateral_t.
+/// This is a rust-ified version of the type CQlQveCollateral.
 /// See Appendix A.3 in the document
 /// "Intel® Software Guard Extensions (Intel® SGX) Data Center Attestation Primitives: ECDSA Quote Library API"
 /// https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf
@@ -41,7 +40,7 @@ impl SgxQlQveCollateral {
 	///
 	/// The caller is in charge of ensuring that `c` is properly initialized and all
 	/// its members have a value that is not nullptr
-	pub unsafe fn from_c_type(c: &sgx_ql_qve_collateral_t) -> Self {
+	pub unsafe fn from_c_type(c: &CQlQveCollateral) -> Self {
 		let pck_crl_issuer_chain = std::slice::from_raw_parts(
 			c.pck_crl_issuer_chain as *const u8,
 			c.pck_crl_issuer_chain_size as usize,
@@ -143,7 +142,7 @@ mod tests {
 		let json = br#"{"tcbInfo":{"id":"SGX","version":3,"issueDate":"2022-11-17T12:45:32Z"},"signature":"71746f2"}"#;
 		let (data, signature) =
 			SgxQlQveCollateral::separate_json_data_and_signature("tcbInfo", json).unwrap();
-		assert_eq!(data, r#"{"id":"SGX","version":3,"issueDate":"2022-11-17T12:45:32Z"}"#);
+		assert_eq!(data, r#"{"id":"SGX","issueDate":"2022-11-17T12:45:32Z","version":3}"#);
 		assert_eq!(signature, "71746f2");
 
 		let json = br#"{"tcbInfo":{not_a_valid_json},"nosignature":"thesignature"}"#;

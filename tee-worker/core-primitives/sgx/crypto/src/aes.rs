@@ -101,13 +101,13 @@ pub trait AesSealing {
 pub use sgx::*;
 
 #[cfg(feature = "sgx")]
-pub mod sgx {
+mod sgx {
 	use super::*;
 	use crate::key_repository::KeyRepository;
 	use itp_sgx_io::{seal, unseal, SealedIO};
 	use log::info;
 	use sgx_rand::{Rng, StdRng};
-	use std::sgxfs::SgxFile;
+	use sgx_tprotected_fs::SgxFile;
 
 	/// Gets a repository for an AES key and initializes
 	/// a fresh key if it doesn't exist at `path`.
@@ -162,7 +162,10 @@ pub mod sgx {
 }
 
 #[cfg(feature = "test")]
-pub mod sgx_tests {
+pub use sgx_tests::*;
+
+#[cfg(feature = "test")]
+mod sgx_tests {
 	use super::sgx::*;
 	use crate::{key_repository::AccessKey, AesSeal, AesSealing};
 	use itp_sgx_temp_dir::TempDir;

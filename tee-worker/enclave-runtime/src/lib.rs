@@ -15,7 +15,6 @@
 
 */
 #![feature(structural_match)]
-#![feature(rustc_attrs)]
 #![feature(core_intrinsics)]
 #![feature(derive_eq)]
 #![feature(trait_alias)]
@@ -73,7 +72,7 @@ use itp_import_queue::PushToQueue;
 use itp_node_api::metadata::NodeMetadata;
 use itp_nonce_cache::{MutateNonce, Nonce};
 
-use itp_settings::worker_mode::{ProvideWorkerMode, WorkerModeProvider};
+use itp_settings::worker_mode::WorkerModeProvider;
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{ShardIdentifier, SignedBlock};
@@ -81,7 +80,7 @@ use itp_utils::write_slice_and_whitespace_pad;
 use litentry_macros::if_development_or;
 use log::*;
 use once_cell::sync::OnceCell;
-use sgx_types::sgx_status_t;
+use sgx_types::error::*;
 use sp_runtime::traits::BlakeTwo256;
 use std::{
 	path::PathBuf,
@@ -130,7 +129,7 @@ pub unsafe extern "C" fn init(
 	untrusted_worker_addr_size: u32,
 	encoded_base_dir_str: *const u8,
 	encoded_base_dir_size: u32,
-) -> sgx_status_t {
+) -> SgxStatus {
 	// Initialize the logging environment in the enclave.
 	if_development_or!(
 		env_logger::builder()
@@ -187,20 +186,17 @@ pub unsafe extern "C" fn init(
 
 	match initialization::init_enclave(mu_ra_url, untrusted_worker_url, path) {
 		Err(e) => e.into(),
-		Ok(()) => sgx_status_t::SGX_SUCCESS,
+		Ok(()) => SgxStatus::Success,
 	}
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_rsa_encryption_pubkey(
-	pubkey: *mut u8,
-	pubkey_size: u32,
-) -> sgx_status_t {
+pub unsafe extern "C" fn get_rsa_encryption_pubkey(pubkey: *mut u8, pubkey_size: u32) -> SgxStatus {
 	let shielding_key_repository = match GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get() {
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -209,11 +205,11 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 		Err(e) => return e.into(),
 	};
 
-	let rsa_pubkey_json = match serde_json::to_string(&rsa_pubkey) {
+	let rsa_pubkey_json = match sgx_serialize::json::encode(&rsa_pubkey) {
 		Ok(k) => k,
 		Err(x) => {
 			println!("[Enclave] can't serialize rsa_pubkey {:?} {}", rsa_pubkey, x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -225,16 +221,16 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 		return Error::BufferError(e).into()
 	};
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u32) -> SgxStatus {
 	let signing_key_repository = match GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get() {
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -248,7 +244,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 	let pubkey_slice = slice::from_raw_parts_mut(pubkey, pubkey_size as usize);
 	pubkey_slice.clone_from_slice(&signer_public);
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 #[no_mangle]
@@ -256,11 +252,11 @@ pub unsafe extern "C" fn set_nonce(
 	nonce: *const u32,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
-) -> sgx_status_t {
+) -> SgxStatus {
 	let id = match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
 		Err(e) => {
 			error!("Failed to decode parentchain_id: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 		Ok(m) => m,
 	};
@@ -277,11 +273,11 @@ pub unsafe extern "C" fn set_nonce(
 		Ok(mut nonce_guard) => *nonce_guard = Nonce(*nonce),
 		Err(e) => {
 			error!("Failed to set {:?} parentchain nonce in enclave: {:?}", id, e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 #[no_mangle]
@@ -290,11 +286,11 @@ pub unsafe extern "C" fn set_node_metadata(
 	node_metadata_size: u32,
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
-) -> sgx_status_t {
+) -> SgxStatus {
 	let id = match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
 		Err(e) => {
 			error!("Failed to decode parentchain_id: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 		Ok(m) => m,
 	};
@@ -302,7 +298,7 @@ pub unsafe extern "C" fn set_node_metadata(
 	let metadata = match NodeMetadata::decode_raw(node_metadata, node_metadata_size as usize) {
 		Err(e) => {
 			error!("Failed to decode node metadata: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 		Ok(m) => m,
 	};
@@ -319,13 +315,13 @@ pub unsafe extern "C" fn set_node_metadata(
 		Ok(repo) => repo.set_metadata(metadata),
 		Err(e) => {
 			error!("Could not get {:?} parentchain component: {:?}", id, e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
 	trace!("Successfully set the node meta data");
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 /// This is reduced to the sidechain block import RPC interface (i.e. worker-worker communication).
@@ -336,12 +332,12 @@ pub unsafe extern "C" fn call_rpc_methods(
 	request_len: u32,
 	response: *mut u8,
 	response_len: u32,
-) -> sgx_status_t {
+) -> SgxStatus {
 	let request = match utf8_str_from_raw(request, request_len as usize) {
 		Ok(req) => req,
 		Err(e) => {
 			error!("[SidechainRpc] FFI: Invalid utf8 request: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
@@ -358,7 +354,7 @@ pub unsafe extern "C" fn call_rpc_methods(
 		return Error::BufferError(e).into()
 	};
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 fn sidechain_rpc_int(request: &str) -> Result<String> {
@@ -385,27 +381,27 @@ pub unsafe extern "C" fn init_enclave_sidechain_components(
 	fail_mode_size: u32,
 	fail_at: *const u8,
 	fail_at_size: u32,
-) -> sgx_status_t {
+) -> SgxStatus {
 	let fail_mode = match Option::<String>::decode_raw(fail_mode, fail_mode_size as usize) {
 		Ok(s) => s,
 		Err(e) => {
 			error!("failed to decode fail mode {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 	let fail_at = match u64::decode_raw(fail_at, fail_at_size as usize) {
 		Ok(v) => v,
 		Err(e) => {
 			error!("failed to decode fail at {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 	if let Err(e) = initialization::init_enclave_sidechain_components(fail_mode, fail_at) {
 		error!("Failed to initialize sidechain components: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return SgxStatus::Unexpected
 	}
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 /// Call this once at worker startup to initialize the TOP pool and direct invocation RPC server.
@@ -417,23 +413,23 @@ pub unsafe extern "C" fn init_enclave_sidechain_components(
 pub unsafe extern "C" fn init_direct_invocation_server(
 	server_addr: *const u8,
 	server_addr_size: usize,
-) -> sgx_status_t {
+) -> SgxStatus {
 	let mut server_addr_encoded = slice::from_raw_parts(server_addr, server_addr_size);
 
 	let server_addr = match String::decode(&mut server_addr_encoded) {
 		Ok(s) => s,
 		Err(e) => {
 			error!("Decoding RPC server address failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
 	if let Err(e) = initialization::init_direct_invocation_server(server_addr) {
 		error!("Failed to initialize direct invocation server: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return SgxStatus::Unexpected
 	}
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 #[no_mangle]
@@ -442,12 +438,12 @@ pub unsafe extern "C" fn init_parentchain_components(
 	params_size: usize,
 	latest_header: *mut u8,
 	latest_header_size: usize,
-) -> sgx_status_t {
+) -> SgxStatus {
 	let encoded_params = slice::from_raw_parts(params, params_size);
 	let latest_header_slice = slice::from_raw_parts_mut(latest_header, latest_header_size);
 
 	match init_parentchain_params_internal(encoded_params.to_vec(), latest_header_slice) {
-		Ok(()) => sgx_status_t::SGX_SUCCESS,
+		Ok(()) => SgxStatus::Success,
 		Err(e) => e.into(),
 	}
 }
@@ -465,29 +461,29 @@ fn init_parentchain_params_internal(params: Vec<u8>, latest_header: &mut [u8]) -
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> SgxStatus {
 	let shard_identifier =
 		ShardIdentifier::from_slice(slice::from_raw_parts(shard, shard_size as usize));
 
 	if let Err(e) = initialization::init_shard(shard_identifier) {
 		error!("Failed to initialize shard ({:?}): {:?}", shard_identifier, e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return SgxStatus::Unexpected
 	}
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn migrate_shard(new_shard: *const u8, shard_size: u32) -> sgx_status_t {
+pub unsafe extern "C" fn migrate_shard(new_shard: *const u8, shard_size: u32) -> SgxStatus {
 	let shard_identifier =
 		ShardIdentifier::from_slice(slice::from_raw_parts(new_shard, shard_size as usize));
 
 	if let Err(e) = initialization::migrate_shard(shard_identifier) {
 		error!("Failed to migrate shard ({:?}): {:?}", shard_identifier, e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return SgxStatus::Unexpected
 	}
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 #[no_mangle]
@@ -501,7 +497,7 @@ pub unsafe extern "C" fn sync_parentchain(
 	parentchain_id: *const u8,
 	parentchain_id_size: u32,
 	immediate_import: c_int,
-) -> sgx_status_t {
+) -> SgxStatus {
 	if let Err(e) = sync_parentchain_internal(
 		blocks_to_sync,
 		blocks_to_sync_size,
@@ -514,10 +510,10 @@ pub unsafe extern "C" fn sync_parentchain(
 		immediate_import == 1,
 	) {
 		error!("Error synching parentchain: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return SgxStatus::Unexpected
 	}
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -549,7 +545,7 @@ unsafe fn sync_parentchain_internal(
 		}
 	}
 
-	dispatch_parentchain_blocks_for_import::<WorkerModeProvider>(
+	dispatch_parentchain_blocks_for_import(
 		blocks_to_sync,
 		events_to_sync,
 		&parentchain_id,
@@ -560,18 +556,18 @@ unsafe fn sync_parentchain_internal(
 #[no_mangle]
 pub unsafe extern "C" fn ignore_parentchain_block_import_validation_until(
 	until: *const u32,
-) -> sgx_status_t {
+) -> SgxStatus {
 	let va = match get_validator_accessor_from_integritee_solo_or_parachain() {
 		Ok(r) => r,
 		Err(e) => {
 			error!("Can't get validator accessor: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return SgxStatus::Unexpected
 		},
 	};
 
 	let _ = va.execute_mut_on_validator(|v| v.set_ignore_validation_until(*until));
 
-	sgx_status_t::SGX_SUCCESS
+	SgxStatus::Success
 }
 
 /// Dispatch the parentchain blocks for import.
@@ -582,7 +578,7 @@ pub unsafe extern "C" fn ignore_parentchain_block_import_validation_until(
 /// * The sidechain uses a triggered dispatcher, where the import of a parentchain block is
 ///   synchronized and triggered by the sidechain block production cycle.
 ///
-fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>(
+fn dispatch_parentchain_blocks_for_import(
 	blocks_to_sync: Vec<SignedBlock>,
 	events_to_sync: Vec<Vec<u8>>,
 	id: &ParentchainId,

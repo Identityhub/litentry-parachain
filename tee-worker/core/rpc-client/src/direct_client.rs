@@ -30,7 +30,7 @@ use itp_types::{DirectRequestStatus, MrEnclave, RsaRequest};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use litentry_primitives::Identity;
 use log::*;
-use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
+use sgx_crypto::rsa::Rsa3072PublicKey;
 use sp_core::H256;
 use std::{
 	sync::{
@@ -51,7 +51,7 @@ pub trait DirectApi {
 	fn get(&self, request: &str) -> Result<String>;
 	/// Server connection with more than one response.
 	fn watch(&self, request: String, sender: MpscSender<String>) -> JoinHandle<()>;
-	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey>;
+	fn get_rsa_pubkey(&self) -> Result<Rsa3072PublicKey>;
 	fn get_mu_ra_url(&self) -> Result<String>;
 	fn get_untrusted_worker_url(&self) -> Result<String>;
 	fn get_state_metadata(&self) -> Result<Metadata>;
@@ -100,15 +100,13 @@ impl DirectClient {
 			return None
 		}
 
-		let maybe_state = Option::decode(&mut rpc_return_value.value.as_slice())
+		Option::decode(&mut rpc_return_value.value.as_slice())
 			// Replace with `inspect_err` once it's stable.
 			.map_err(|e| {
 				error!("Failed to decode return value: {:?}", e);
 				e
 			})
-			.ok()?;
-
-		maybe_state
+			.ok()?
 	}
 
 	// common helper function for `get_state_metadata` and `get_state_metadata_raw`
@@ -163,7 +161,7 @@ impl DirectApi for DirectClient {
 		})
 	}
 
-	fn get_rsa_pubkey(&self) -> Result<Rsa3072PubKey> {
+	fn get_rsa_pubkey(&self) -> Result<Rsa3072PublicKey> {
 		let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
 			Id::Text("1".to_string()),
 			"author_getShieldingKey".to_string(),
@@ -174,7 +172,9 @@ impl DirectApi for DirectClient {
 		let response_str = self.get(&jsonrpc_call)?;
 
 		let shielding_pubkey_string = decode_from_rpc_response::<String>(&response_str)?;
-		let shielding_pubkey: Rsa3072PubKey = serde_json::from_str(&shielding_pubkey_string)?;
+		let shielding_pubkey: Rsa3072PublicKey =
+			sgx_serialize::json::decode(&shielding_pubkey_string)
+				.map_err(|e| Error::Custom(format!("{:?}", e).into()))?;
 
 		info!("[+] Got RSA public key of enclave");
 		Ok(shielding_pubkey)

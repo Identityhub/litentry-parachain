@@ -26,12 +26,6 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[macro_use]
 extern crate sgx_tstd as std;
 
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx_reexport_prelude {
-	pub use serde_json_sgx as serde_json;
-}
-
 pub mod aes;
 pub mod ed25519;
 pub mod ed25519_derivation;
@@ -49,15 +43,15 @@ pub mod mocks;
 
 #[cfg(feature = "test")]
 pub mod tests {
-	pub use super::ed25519::sgx_tests::{
+	pub use super::ed25519::{
 		ed25529_sealing_works, using_get_ed25519_repository_twice_initializes_key_only_once,
 	};
 
-	pub use super::rsa3072::sgx_tests::{
+	pub use super::rsa3072::{
 		rsa3072_sealing_works, using_get_rsa3072_repository_twice_initializes_key_only_once,
 	};
 
-	pub use super::aes::sgx_tests::{
+	pub use super::aes::{
 		aes_sealing_works, using_get_aes_repository_twice_initializes_key_only_once,
 	};
 }

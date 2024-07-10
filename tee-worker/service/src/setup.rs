@@ -105,7 +105,8 @@ mod needs_enclave {
 		info!("*** Get the public key from the TEE\n");
 		let pubkey = enclave.get_rsa_shielding_pubkey().unwrap();
 		let file = File::create(SHIELDING_KEY_FILE).unwrap();
-		match serde_json::to_writer(file, &pubkey) {
+		let pubkey_str = sgx_serialize::json::encode(&pubkey).unwrap();
+		match serde_json::to_writer(file, &pubkey_str) {
 			Err(x) => {
 				error!("[-] Failed to write '{}'. {}", SHIELDING_KEY_FILE, x);
 			},

@@ -30,8 +30,8 @@ pub mod sgx_reexport_prelude {
 	pub use base64_sgx as base64;
 	pub use chrono_sgx as chrono;
 	pub use rustls_sgx as rustls;
-	pub use serde_json_sgx as serde_json;
 	pub use thiserror_sgx as thiserror;
+	pub use webpki_roots_sgx as webpki_roots;
 	pub use webpki_sgx as webpki;
 	pub use yasna_sgx as yasna;
 }

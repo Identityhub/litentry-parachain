@@ -661,7 +661,7 @@ impl Command {
 				NftHolderCommand::MFan => NftHolder(Web3NftType::MFan),
 			}),
 			Command::Dynamic(arg) => {
-				let decoded_id = hex::decode(&arg.smart_contract_id.clone()).unwrap();
+				let decoded_id = hex::decode(arg.smart_contract_id.clone()).unwrap();
 				let id_bytes: [u8; 20] = decoded_id.try_into().unwrap();
 
 				let smart_contract_params = match &arg.smart_contract_param {

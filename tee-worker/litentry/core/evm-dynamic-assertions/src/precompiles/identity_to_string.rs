@@ -31,7 +31,8 @@ pub fn identity_to_string(input: Vec<u8>) -> PrecompileResult {
 			},
 		};
 
-	let network_type = decoded.get(0).and_then(|v| v.clone().into_uint().map(|t| t.as_u32() as u8));
+	let network_type =
+		decoded.first().and_then(|v| v.clone().into_uint().map(|t| t.as_u32() as u8));
 	let identity_value = decoded.get(1).and_then(|v| v.clone().into_bytes());
 
 	let value = match (network_type, identity_value) {
@@ -62,13 +63,13 @@ pub fn identity_to_string(input: Vec<u8>) -> PrecompileResult {
 				Web3Network::Combo.get_code(),
 			]
 			.contains(&n) =>
-			format!("0x{}", hex::encode(&v)),
+			format!("0x{}", hex::encode(v)),
 		// Bitcoin
 		(Some(n), Some(v))
 			if n >= Web3Network::BitcoinP2tr.get_code()
 				&& n <= Web3Network::BitcoinP2wsh.get_code() =>
 		{
-			let address = hex::encode(&v);
+			let address = hex::encode(v);
 			pubkey_to_address(n, &address)
 		},
 		// Solana

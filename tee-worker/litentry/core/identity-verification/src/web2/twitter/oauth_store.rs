@@ -2,11 +2,7 @@ use codec::Encode;
 use core::result::Result;
 use lazy_static::lazy_static;
 use lru::LruCache;
-#[cfg(feature = "std")]
-use std::sync::RwLock;
-#[cfg(feature = "sgx")]
-use std::sync::SgxRwLock as RwLock;
-use std::{num::NonZeroUsize, string::String};
+use std::{num::NonZeroUsize, string::String, sync::RwLock};
 
 use litentry_primitives::ParentchainAccountId as AccountId;
 

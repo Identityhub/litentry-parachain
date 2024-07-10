@@ -38,16 +38,12 @@ pub use error::*;
 mod request;
 pub use request::*;
 
-#[cfg(feature = "std")]
-use std::sync::Mutex;
-#[cfg(feature = "sgx")]
-use std::sync::SgxMutex as Mutex;
 use std::{
 	boxed::Box,
 	error::Error as StdError,
 	sync::{
 		mpsc::{channel, Receiver, Sender},
-		Arc,
+		Arc, Mutex,
 	},
 };
 

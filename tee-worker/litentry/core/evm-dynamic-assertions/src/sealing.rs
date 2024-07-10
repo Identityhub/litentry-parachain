@@ -50,7 +50,8 @@ pub mod io {
 	pub use codec::{Decode, Encode};
 	use itp_sgx_io::{seal as io_seal, unseal as io_unseal, SealedIO};
 	use log::{debug, info};
-	use std::{path::PathBuf, sgxfs::SgxFile, vec};
+	use sgx_tprotected_fs::SgxFile;
+	use std::{path::PathBuf, vec};
 
 	pub fn seal_state(path: &str, state: UnsealedAssertions) -> Result<(), SealingError> {
 		AssertionsSeal::new(path.into()).seal(&state)
