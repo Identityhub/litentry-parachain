@@ -517,7 +517,7 @@ function migrate_shard {
     cd "$WORKER_BASEDIR/w$i" || exit
     echo "old MRENCLAVE: $OLD_MRENCLAVE"
     echo "new MRENCLAVE: $NEW_MRENCLAVE"
-    ./litentry-worker migrate-shard --old-shard $OLD_MRENCLAVE --new-shard $NEW_MRENCLAVE
+    ./litentry-worker migrate-shard $OLD_MRENCLAVE --new-shard $NEW_MRENCLAVE
 
     cd shards || exit
     rm -rf $OLD_SHARD
