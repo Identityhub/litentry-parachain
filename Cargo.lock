@@ -7984,7 +7984,7 @@ dependencies = [
 name = "pallet-teebag"
 version = "0.1.0"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.21.2",
  "chrono",
  "der 0.6.1",
  "env_logger 0.10.2",
